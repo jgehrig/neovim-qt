@@ -73,6 +73,8 @@ signals:
 	/// as seen in Tab::tab.
 	void neovimTablineUpdate(int64_t curtab, QList<Tab> tabs);
 	void neovimShowtablineSet(int);
+	void neovimConfirmDialog(int type, const QString &title, const QString& message,
+		const QString& buttons, int dfltbutton);
 	void fontChanged();
 
 public slots:
@@ -121,6 +123,7 @@ protected:
 	virtual void handleResize(uint64_t cols, uint64_t rows);
 	virtual void handlePut(const QVariantList& args);
 	virtual void handleHighlightSet(const QVariantMap& args);
+	virtual void handleConfirmDialog(const QVariantList& opargs);
 	virtual void handleRedraw(const QByteArray& name, const QVariantList& args);
 	virtual void handleScroll(const QVariantList& args);
 	virtual void handleModeChange(const QString& mode);

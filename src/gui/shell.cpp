@@ -224,6 +224,8 @@ void Shell::init()
 	}
 	options.insert("rgb", true);
 
+	options.insert("ext_dialogs", true);
+
 	MsgpackRequest *req;
 	if (m_nvim->api2()) {
 		req = m_nvim->api2()->nvim_ui_attach(width, height, options);
@@ -377,6 +379,28 @@ void Shell::handleSetScrollRegion(const QVariantList& opargs)
 				QPoint(right+1, bot+1));
 }
 
+void Shell::handleConfirmDialog(const QVariantList& opargs)
+{
+	if (opargs.size() < 5 ||
+		!opargs.at(0).canConvert<int>() ||
+		!opargs.at(1).canConvert<QByteArray>() ||
+		!opargs.at(2).canConvert<QByteArray>() ||
+		!opargs.at(3).canConvert<QByteArray>() ||
+		!opargs.at(4).canConvert<int>()) {
+
+		qWarning() << "Unexpected arguments for confirm_dialog:" << opargs;
+		return;
+	}
+
+	const int type = opargs.at(0).toInt();
+	const QString title = m_nvim->decode(opargs.at(1).toByteArray());
+	const QString message = m_nvim->decode(opargs.at(2).toByteArray());
+	const QString buttons = m_nvim->decode(opargs.at(3).toByteArray());
+	const int dfltbutton = opargs.at(4).toInt();
+
+	emit neovimConfirmDialog(type, title, message, buttons, dfltbutton);
+}
+
 void Shell::handleRedraw(const QByteArray& name, const QVariantList& opargs)
 {
 	if (name == "update_fg") {
@@ -525,6 +549,8 @@ void Shell::handleRedraw(const QByteArray& name, const QVariantList& opargs)
 		// TODO
 	} else if (name == "default_colors_set") {
 		// TODO
+	} else if (name == "confirm_dialog") {
+		handleConfirmDialog(opargs);
 	} else {
 		qDebug() << "Received unknown redraw notification" << name << opargs;
 	}
@@ -776,6 +802,8 @@ void Shell::handleExtGuiOption(const QString& name, const QVariant& value)
 		m_nvim->api2()->nvim_ui_set_option("ext_popupmenu", value.toBool());
 	} else if (name == "Cmdline") {
 	} else if (name == "Wildmenu") {
+	} else if (name == "Dialogs") {
+		m_nvim->api2()->nvim_ui_set_option("ext_dialogs", value.toBool());
 	} else {
 		qDebug() << "Unknown GUI Option" << name << value;
 	}
@@ -804,6 +832,7 @@ void Shell::handleSetOption(const QString& name, const QVariant& value)
 	} else if (name == "termguicolors") {
 	} else if (name == "ext_cmdline") {
 	} else if (name == "ext_wildmenu") {
+	} else if (name == "ext_dialogs") {
 	} else {
 		qDebug() << "Received unknown option" << name << value;
 	}

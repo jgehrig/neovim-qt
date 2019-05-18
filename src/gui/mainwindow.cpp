@@ -1,8 +1,10 @@
 #include "mainwindow.h"
 
 #include <QCloseEvent>
-#include <QToolBar>
 #include <QLayout>
+#include <QMessageBox>
+#include <QStringList>
+#include <QToolBar>
 
 namespace NeovimQt {
 
@@ -88,6 +90,8 @@ void MainWindow::init(NeovimConnector *c)
 			this, &MainWindow::neovimTablineUpdate);
 	connect(m_shell, &Shell::neovimShowtablineSet,
 			this, &MainWindow::neovimShowtablineSet);
+	connect(m_shell, &Shell::neovimConfirmDialog,
+			this, &MainWindow::neovimConfirmDialog);
 	m_shell->setFocus(Qt::OtherFocusReason);
 
 	if (m_nvim->errorCause()) {
@@ -336,6 +340,124 @@ void MainWindow::neovimTablineUpdate(int64_t curtab, QList<Tab> tabs)
 	}
 
 	Q_ASSERT(tabs.size() == m_tabline->count());
+}
+
+static QMessageBox::StandardButton TryGetStandardButton(const QString& buttonText)
+{
+	static const QMap<QString, QMessageBox::StandardButton> s_buttonMap = {
+		{"OK",              QMessageBox::Ok},
+		{"OPEN",            QMessageBox::Open},
+		{"SAVE",            QMessageBox::Save},
+		{"CANCEL",          QMessageBox::Cancel},
+		{"CLOSE",           QMessageBox::Close},
+		{"DISCARD",         QMessageBox::Discard},
+		{"APPLY",           QMessageBox::Apply},
+		{"RESET",           QMessageBox::Reset},
+		{"RESTOREDEFAULTS", QMessageBox::RestoreDefaults},
+		{"HELP",            QMessageBox::Help},
+		{"SAVEALL",         QMessageBox::SaveAll},
+		{"YES",             QMessageBox::Yes},
+		{"YESTOALL",        QMessageBox::YesToAll},
+		{"NO",              QMessageBox::No},
+		{"NOTOALL",         QMessageBox::NoToAll},
+		{"ABORT",           QMessageBox::Abort},
+		{"RETRY",           QMessageBox::Retry},
+		{"IGNORE",          QMessageBox::Ignore} };
+
+	QString key = buttonText.toUpper();
+	key.remove('&');
+	key.remove(' ');
+
+	if (s_buttonMap.contains(key))
+	{
+		return s_buttonMap[key];
+	}
+
+	return QMessageBox::NoButton;
+}
+
+static QMessageBox::Icon GetIconType(int vim_enum)
+{
+	// Types defined by neovim in 'src/nvim/message.h'
+	constexpr int VIM_GENERIC   = 0;
+	constexpr int VIM_ERROR     = 1;
+	constexpr int VIM_WARNING   = 2;
+	constexpr int VIM_INFO      = 3;
+	constexpr int VIM_QUESTION  = 4;
+
+	switch (vim_enum)
+	{
+		case VIM_GENERIC:
+			return QMessageBox::NoIcon;
+
+		case VIM_ERROR:
+			return QMessageBox::Critical;
+
+		case VIM_WARNING:
+			return QMessageBox::Warning;
+
+		case VIM_INFO:
+			return QMessageBox::Information;
+
+		case VIM_QUESTION:
+			return QMessageBox::Question;
+
+		default:
+			return QMessageBox::NoIcon;
+	}
+}
+
+void MainWindow::neovimConfirmDialog(
+	int type,
+	const QString &title,
+	const QString &message,
+	const QString &buttons,
+	int dfltbutton)
+{
+	QMessageBox msgBox;
+	msgBox.setIcon(GetIconType(type));
+	msgBox.setText(title);
+	msgBox.setInformativeText(message);
+
+	// Parse `buttons` string and create QPushbutton objects for dialog.
+	const QStringList btnLabelList = buttons.split(QRegExp("\n"));
+	QList<QPushButton*> dlgButtonList;
+
+	for (const auto& buttonText : btnLabelList) {
+		QMessageBox::StandardButton stdButton = TryGetStandardButton(buttonText);
+
+		if (stdButton != QMessageBox::NoButton) {
+			dlgButtonList.append(msgBox.addButton(stdButton));
+			continue;
+		}
+
+		// Qt does not have this button, create a custom one.
+		dlgButtonList.append(msgBox.addButton(buttonText, QMessageBox::NoRole));
+	}
+
+	// Default button (index starts at 1).
+	if (dfltbutton > 0 && dfltbutton - 1 < dlgButtonList.size()) {
+		msgBox.setDefaultButton(dlgButtonList[dfltbutton - 1]);
+	}
+
+	// Show modal dialog (blocking)
+	const int returnCode = msgBox.exec();
+
+	// Explicitly call out dialog close button, handled as QMessageBox::Cancel.
+	if (returnCode == QMessageBox::Cancel) {
+		const char retValue = 0;
+		m_nvim->api0()->vim_input(QString(retValue).toLatin1());
+		return;
+	}
+
+	// Determine which button was clicked.
+	for (int i=0;i<dlgButtonList.size();i++) {
+		if (msgBox.clickedButton() == dlgButtonList[i]) {
+			const char retValue = i + 1;
+			m_nvim->api0()->vim_input(QString(retValue).toLatin1());
+			return;
+		}
+	}
 }
 
 void MainWindow::changeTab(int index)

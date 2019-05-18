@@ -206,3 +206,10 @@ endfunction
 command! GuiTreeviewToggle call <SID>TreeViewToggle()
 noremap <script> <Plug>GuiTreeviewToggle :call <SID>TreeViewToggle()
 anoremenu <script> Gui.Treeview.Toggle :call <SID>TreeViewShowToggle()
+
+" Toggle between Terminal/GUI based dialogs
+function! s:GuiDialogs(enable) abort
+	call rpcnotify(0, 'Gui', 'Option', 'Dialogs', a:enable)
+endfunction
+command! -nargs=1 GuiDialogs call s:GuiDialogs(<args>)
+

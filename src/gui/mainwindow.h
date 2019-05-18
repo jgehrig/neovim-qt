@@ -48,6 +48,8 @@ private slots:
 	void neovimIsUnsupported();
 	void neovimShowtablineSet(int);
 	void neovimTablineUpdate(int64_t curtab, QList<Tab> tabs);
+	void neovimConfirmDialog(int type, const QString &title,
+		const QString& message, const QString& buttons, int dfltbutton);
 	void extTablineSet(bool);
 	void changeTab(int index);
 private:
