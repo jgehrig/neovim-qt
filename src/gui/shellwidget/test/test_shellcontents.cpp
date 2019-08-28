@@ -226,7 +226,7 @@ private slots:
 		int rows = 26;
 		int cols = 100;
 		ShellContents s = initShell(rows, cols);
-		
+
 		s.clearAll();
 		for (int i=0; i<rows; i++) {
 			for (int j=0; j<cols; j++) {
@@ -347,15 +347,14 @@ private slots:
 					|| fi.suffix() != "txt") {
 				continue;
 			}
-			ShellContents s(0, 0);
-			QCOMPARE(s.fromFile(fi.absoluteFilePath()), true);
-			
+			ShellContents s{ ShellContents::MakeFromFile(fi.absoluteFilePath()) };
+
 			QString out("test/");
 			out.append(fi.fileName().append(".out.jpeg"));
 			saveShellContents(s, out);
 
 			// Compare file with previous test output
-		
+			// FIXME Remove?
 		}
 	}
 };

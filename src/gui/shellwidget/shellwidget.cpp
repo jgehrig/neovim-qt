@@ -18,13 +18,6 @@ ShellWidget::ShellWidget(QWidget *parent)
 	setDefaultFont();
 }
 
-ShellWidget* ShellWidget::fromFile(const QString& path)
-{
-	ShellWidget *w = new ShellWidget();
-	w->m_contents.fromFile(path);
-	return w;
-}
-
 void ShellWidget::setDefaultFont()
 {
 #if defined(Q_OS_MAC)

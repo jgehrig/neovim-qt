@@ -2,6 +2,8 @@
 
 #include "cell.h"
 
+#include <vector>
+
 /// A class to hold the contents of the shell / i.e. a grid of characters. This
 /// class is meant to hold state about shell contents, but no more - e.g. cursor
 /// information should be stored somewhere else.
@@ -9,19 +11,18 @@ class ShellContents
 {
 public:
 	ShellContents(int rows, int columns);
-	~ShellContents();
-	ShellContents(const ShellContents& other);
 
-	inline int columns() const {
-		return _columns;
-	}
-	inline int rows() const {
-		return _rows;
+	ShellContents(const ShellContents& other)
+		: m_grid{ other.m_grid }
+	{
 	}
 
-	bool fromFile(const QString& path);
+	/// Build shell contents from file, each line in the file is a shell line.
+	static ShellContents MakeFromFile(const QString& path);
 
-	const Cell* data();
+	int rows() const { return m_grid.size(); }
+	int columns() const;
+
 	Cell& value(int row, int column);
 	const Cell& constValue(int row, int column) const;
 	int put(const QString&, int row, int column,
@@ -30,7 +31,7 @@ public:
 			bool underline=false, bool undercurl=false);
 
 	void clearAll(QColor bg=QColor());
-	void clearRow(int r, int startCol=0);
+	void clearRow(int row, int startCol=0);
 	void clearRegion(int row0, int col0, int row1, int col1,
 			QColor bg=QColor());
 	void resize(int rows, int columns);
@@ -38,13 +39,8 @@ public:
 	void scroll(int rows);
 
 private:
-	void allocData();
 	bool verifyRegion(int& row0, int& row1, int& col0, int& col1);
 
-	// row*columns
-	Cell *_data;
-	static Cell invalidCell;
-	int _rows, _columns;
-
-	ShellContents& operator=(const ShellContents& other);
+	std::vector<std::vector<Cell>> m_grid;
+	static Cell s_invalidCell;
 };

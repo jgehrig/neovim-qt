@@ -33,7 +33,6 @@ public:
 	QColor special() const;
 	QString fontFamily() const;
 	qreal fontSize() const;
-	static ShellWidget* fromFile(const QString& path);
 
 	int rows() const;
 	int columns() const;
