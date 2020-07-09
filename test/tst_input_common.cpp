@@ -17,6 +17,7 @@ private slots:
 	void AltGrKeyEventWellFormed() noexcept;
 	void ShiftSpaceWellFormed() noexcept;
 	void ShiftBackSpaceWellFormed() noexcept;
+	void SpanishKeyboardLayout() noexcept;
 
 	// Mouse Input
 	void MouseLeftClick() noexcept;
@@ -263,6 +264,66 @@ void TestInputCommon::MouseMiddleClick() noexcept
 
 	QCOMPARE(middleClickPress, QString{ "<MiddleMouse><1,2>" });
 	QCOMPARE(middleClickRelease, QString{ "<MiddleRelease><1,2>" });
+=======
+void TestInputCommon::SpanishKeyboardLayout() noexcept
+{
+	// Issue 720: Spanish layout ignores Left Square Bracket [
+	//
+	// FIXME comment accuracy "key" to actual key
+
+	// Two keys pressed: ` and space. Only one event is sent. Prints: `
+	QKeyEvent evAccentSpace{ QKeyEvent::KeyPress, Qt::Key_Space, Qt::NoModifier, QStringLiteral("`") };
+
+	QCOMPARE(NeovimQt::Input::convertKey(evAccentSpace), QStringLiteral("`"));
+
+	// Double accent key: ` and `. Two events are sent on the second key event. Prints: ``
+	QKeyEvent evAccentFirst{ QKeyEvent::KeyPress, Qt::Key_QuoteLeft, Qt::NoModifier, QStringLiteral("`") };
+	QKeyEvent evAccentSecond{ QKeyEvent::KeyPress, 0, Qt::NoModifier, QStringLiteral("`") };
+
+	QCOMPARE(NeovimQt::Input::convertKey(evAccentFirst), QStringLiteral("`"));
+	QCOMPARE(NeovimQt::Input::convertKey(evAccentSecond), QStringLiteral("`"));
+
+	// AltGr (Right Alt) + accent key. Prints: [
+	QKeyEvent evAltGrSquareBracket{ QKeyEvent::KeyPress, Qt::Key_AsciiCircum, Qt::AltModifier, QStringLiteral("[") };
+	QCOMPARE(NeovimQt::Input::convertKey(evAltGrSquareBracket), QStringLiteral("["));
+
+//	// Shift + Accent ` (^) then space
+//	QKeyEvent evShiftAccent{ QKeyEvent::KeyPress, Qt::Key_QuoteLeft, Qt::ShiftModifier, QStringLiteral("^") };
+//	QKeyEvent evShiftAccentSpace{ QKeyEvent::KeyPress, Qt::Key_Space, Qt::NoModifier, QStringLiteral("^") };
+//
+//	QCOMPARE(NeovimQt::Input::convertKey(evShiftAccent), QStringLiteral(""));
+//	QCOMPARE(NeovimQt::Input::convertKey(evShiftAccentSpace), QStringLiteral("^"));
+//
+//	// Shift + Accent ` (^) twice, prints twice
+//	QKeyEvent evShiftAccentSecond{ QKeyEvent::KeyPress, 0, Qt::ShiftModifier, QStringLiteral("^") };
+//
+//	QCOMPARE(NeovimQt::Input::convertKey(evAccentSpace), QStringLiteral(""));
+//	QCOMPARE(NeovimQt::Input::convertKey(evAccentSpace), QStringLiteral("^^"));
+//
+//	// AltGr + Key
+//	QKeyEvent evAltGrLeftBracket{ QKeyEvent::KeyPress, Qt::Key_AsciiCircum,
+//		Qt::ShiftModifier | Qt::ControlModifier, QStringLiteral("[") };
+//
+//	QCOMPARE(NeovimQt::Input::convertKey(evAltGrLeftBracket), QStringLiteral("["));
+//
+//	// Ctrl + Shift + Key `/^
+//	// FIXME Not sure what is supposed to happen here? Correct Key combo? Empty?
+//	QKeyEvent evAsciiCircumIgnored{ QKeyEvent::KeyPress, Qt::Key_AsciiCircum,
+//		Qt::ShiftModifier | Qt::ControlModifier };
+//
+//	QCOMPARE(NeovimQt::Input::convertKey(evAsciiCircumIgnored), QStringLiteral(""));
+//
+//	// Accent ` then e
+//	QKeyEvent evAccentE{ QKeyEvent::KeyPress, Qt::Key_E, Qt::NoModifier, QStringLiteral("ê") };
+//
+//	QCOMPARE(NeovimQt::Input::convertKey(evAccent), QStringLiteral(""));
+//	QCOMPARE(NeovimQt::Input::convertKey(evAccentE), QStringLiteral("ê"));
+//
+//	// Accent ^ then e
+//	QKeyEvent evShiftAccentE{ QKeyEvent::KeyPress, Qt::Key_E, Qt::NoModifier, QStringLiteral("ê") };
+//
+//	QCOMPARE(NeovimQt::Input::convertKey(evShiftAccent), QStringLiteral(""));
+//	QCOMPARE(NeovimQt::Input::convertKey(evShiftAccentE), QStringLiteral("ê"));
 }
 
 #include "tst_input_common.moc"
