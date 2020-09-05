@@ -2,29 +2,30 @@
 #define NEOVIM_QT_MAINWINDOW
 
 #include <QMainWindow>
+#include <QSplitter>
 #include <QStackedWidget>
 #include <QTabBar>
-#include <QSplitter>
-#include "treeview.h"
-#include "neovimconnector.h"
+
 #include "errorwidget.h"
+#include "neovimconnector.h"
 #include "scrollbar.h"
 #include "shell.h"
+#include "treeview.h"
 
 namespace NeovimQt {
 
-class MainWindow: public QMainWindow
+class MainWindow final : public QMainWindow
 {
 	Q_OBJECT
 public:
-	enum DelayedShow {
+	enum class DelayedShow {
 		Disabled,
 		Normal,
 		Maximized,
 		FullScreen,
 	};
 
-	MainWindow(NeovimConnector *, ShellOptions opts, QWidget *parent=0);
+	MainWindow(NeovimConnector *, ShellOptions opts, QWidget *parent = nullptr);
 	bool neovimAttached() const;
 	Shell* shell();
 	void restoreWindowGeometry();
@@ -61,23 +62,23 @@ private slots:
 
 private:
 	void init(NeovimConnector *);
-	NeovimConnector *m_nvim;
-	ErrorWidget *m_errorWidget;
-	QSplitter *m_window;
-	TreeView *m_tree;
-	Shell *m_shell;
-	DelayedShow m_delayedShow;
+	NeovimConnector *m_nvim{ nullptr };
+	ErrorWidget *m_errorWidget{ nullptr };
+	QSplitter *m_window{ nullptr };
+	TreeView *m_tree{ nullptr };
+	Shell *m_shell{ nullptr };
+	DelayedShow m_delayedShow{ DelayedShow::Disabled };
 	QStackedWidget m_stack;
-	QTabBar *m_tabline;
-	QToolBar *m_tabline_bar;
+	QTabBar *m_tabline{ nullptr };
+	QToolBar *m_tabline_bar{ nullptr };
 	ShellOptions m_shell_options;
-	bool m_neovim_requested_close;
-	QMenu *m_contextMenu;
-	QAction *m_actCut;
-	QAction *m_actCopy;
-	QAction *m_actPaste;
-	QAction *m_actSelectAll;
-	ScrollBar *m_scrollbar;
+	bool m_neovim_requested_close{ false };
+	QMenu *m_contextMenu{ nullptr };
+	QAction *m_actCut{ nullptr };
+	QAction *m_actCopy{ nullptr };
+	QAction *m_actPaste{ nullptr };
+	QAction *m_actSelectAll{ nullptr };
+	ScrollBar *m_scrollbar{ nullptr };
 };
 
 } // Namespace
