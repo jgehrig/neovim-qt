@@ -186,7 +186,7 @@ QString convertKey(const QKeyEvent& ev) noexcept
 	const QMap<int, QString>& specialKeys { GetSpecialKeysMap() };
 
 	if (specialKeys.contains(key)) {
-		// Issue#720: FIXME Comment
+		// Issue#720: International keyboards may insert an accent on space.
 		if (key == Qt::Key_Space && text != " ") {
 			return text;
 		}
@@ -208,7 +208,7 @@ QString convertKey(const QKeyEvent& ev) noexcept
 		return ToKeyString(GetModifierPrefix(modNoShift), "lt");
 	}
 
-	// Issue#720: FIXME comment...
+	// Issue#720: Spanish keyboard "[" character insertion
 	if (key == Qt::Key_AsciiCircum && text == "[") {
 		const Qt::KeyboardModifiers modNoAlt{ mod & ~Qt::AltModifier };
 
