@@ -264,7 +264,8 @@ void TestInputCommon::MouseMiddleClick() noexcept
 
 	QCOMPARE(middleClickPress, QString{ "<MiddleMouse><1,2>" });
 	QCOMPARE(middleClickRelease, QString{ "<MiddleRelease><1,2>" });
-=======
+}
+
 void TestInputCommon::SpanishKeyboardLayout() noexcept
 {
 	// Issue 720: Spanish layout ignores Left Square Bracket [
