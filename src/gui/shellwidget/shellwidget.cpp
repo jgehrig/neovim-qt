@@ -360,7 +360,7 @@ void ShellWidget::paintForegroundCellText(
 	}
 }
 
-static bool AreGlyphPositionsUniform(
+/*static*/ bool ShellWidget::AreGlyphPositionsUniform(
 	const QVector<QPointF>& glyphPositionList,
 	int cellWidth) noexcept
 {
@@ -368,49 +368,121 @@ static bool AreGlyphPositionsUniform(
 		return true;
 	}
 
-	qreal lastPos{ glyphPositionList[0].x() };
-	for (int i=1; i<glyphPositionList.size(); i++) {
-		const qreal delta{ lastPos - glyphPositionList[i].x() };
-		if (delta != cellWidth) {
-			return false;
+	int lastPos{ static_cast<int>(glyphPositionList[0].x()) };
+	for (int i=1;i<glyphPositionList.size();i++)
+	{
+		int xPos{ static_cast<int>(glyphPositionList[i].x()) };
+		int delta{ xPos - lastPos };
+		lastPos = xPos;
+
+		if (delta == cellWidth) {
+			continue;
 		}
+
+		if (delta % cellWidth == 0) {
+			continue;
+		}
+
+		return false;
 	}
 
 	return true;
 }
 
-static QVector<QPointF> DistributeGlyphPositions(
-	QVector<QPointF>&& glyphPositionList,
-	int cellWidth) noexcept
+static int RoundToNearestCell(qreal widthPixels, int cellWidth) noexcept
 {
-	if (glyphPositionList.size() > 1) {
-		qreal adjustPositionX{ glyphPositionList[0].x() };
-		for (auto& glyphPos : glyphPositionList) {
-			glyphPos.setX(adjustPositionX);
-			adjustPositionX += cellWidth;
-		}
+	int width{ static_cast<int>(widthPixels) };
+
+	// All characters must be at least 1 cell wide
+	if (width < cellWidth) {
+		return 1;
 	}
 
-	return std::move(glyphPositionList);
+	// Less than 1/2, round down
+	if (width % cellWidth < cellWidth / 2) {
+		return width / cellWidth;
+	}
+
+	// Round up
+	return (width / cellWidth) + 1;
 }
 
-static QVector<uint32_t> RemoveLigaturesUnderCursor(
-	const QGlyphRun& glyphRun,
-	const QString& textGlyphRun,
-	int cursorGlyphRunPos) noexcept
+/*static*/ void ShellWidget::DistributeGlyphPositions(
+	QGlyphRun& glyphRunOut,
+	const QString& text,
+	int cellWidth) noexcept
 {
-	auto glyphIndexList{ glyphRun.glyphIndexes() };
-	auto glyphIndexListNoLigatures{ glyphRun.rawFont().glyphIndexesForString(textGlyphRun) };
+	auto glyphPositionList{ glyphRunOut.positions() };
 
-	if (cursorGlyphRunPos < 0
-		|| cursorGlyphRunPos >= glyphIndexList.size()
-		|| cursorGlyphRunPos >= glyphIndexListNoLigatures.size()) {
-		qDebug() << "ERROR: Invalid cursorGlyphRunPos!";
-		return {};
+	if (glyphPositionList.size() <= 1
+		|| AreGlyphPositionsUniform(glyphPositionList, cellWidth))
+	{
+		return;
 	}
 
-	if (glyphIndexList.at(cursorGlyphRunPos) != glyphIndexListNoLigatures.at(cursorGlyphRunPos)) {
-		for(int i=cursorGlyphRunPos; i>=0; i--) {
+	qreal adjXPos{ glyphPositionList.at(0).x() };
+	// Encoding Scheme: 1 Glyph per Character, Fira Code
+	if (text.size() == glyphPositionList.size()) {
+		for (auto& pos : glyphPositionList)
+		{
+			pos.setX(adjXPos);
+			adjXPos += cellWidth;
+		}
+
+		glyphRunOut.setPositions(glyphPositionList);
+	}
+	// Encoding Scheme: 1 Glyph per Ligature, Operator Mono
+	else {
+		const auto glyphPositionListOriginal{ glyphRunOut.positions() };
+
+		for (int i=1;i<glyphPositionList.size();i++) {
+			qreal glyphPixelWidth{ glyphPositionListOriginal[i].x() - glyphPositionListOriginal[i-1].x() };
+
+			int glyphCellWidth{ RoundToNearestCell(glyphPixelWidth, cellWidth) };
+
+			if (glyphCellWidth != 1) {
+				adjXPos += glyphCellWidth * cellWidth;
+			}
+			else {
+				adjXPos += cellWidth;
+			}
+
+			glyphPositionList[i].setX(adjXPos);
+		}
+
+		glyphRunOut.setPositions(glyphPositionList);
+	}
+}
+
+/*static*/ void ShellWidget::RemoveLigaturesUnderCursor(
+	QGlyphRun& glyphRunOut,
+	const QString& textGlyphRun,
+	int cursorTextPos,
+	int cellWidth,
+	const QVector<uint32_t>* glyphIndexListNoLigaturesOverride) noexcept
+{
+	auto glyphIndexList{ glyphRunOut.glyphIndexes() };
+	auto glyphPositionList{ glyphRunOut.positions() };
+
+	const auto& glyphIndexListNoLigatures{ (!glyphIndexListNoLigaturesOverride) ?
+		glyphRunOut.rawFont().glyphIndexesForString(textGlyphRun) :
+		*glyphIndexListNoLigaturesOverride };
+
+	// Encoding Scheme: 1 Glyph per Character, Fira Code
+	if (textGlyphRun.size() == glyphIndexList.size()) {
+		if (cursorTextPos < 0
+			|| cursorTextPos >= glyphIndexList.size()
+			|| cursorTextPos >= glyphIndexListNoLigatures.size()) {
+			qDebug() << "ERROR: Invalid cursorTextPos!";
+			return;
+		}
+
+		if (glyphIndexList.at(cursorTextPos) == glyphIndexListNoLigatures.at(cursorTextPos)) {
+			// No glyph changes required
+			return;
+		}
+
+		for(int i=cursorTextPos; i>=0; i--) {
 			if (glyphIndexList.at(i) == glyphIndexListNoLigatures.at(i)) {
 				break;
 			}
@@ -418,7 +490,7 @@ static QVector<uint32_t> RemoveLigaturesUnderCursor(
 			glyphIndexList.data()[i] = glyphIndexListNoLigatures[i];
 		}
 
-		for(int i=cursorGlyphRunPos+1; i<glyphIndexList.size(); i++) {
+		for(int i=cursorTextPos+1; i<glyphIndexList.size(); i++) {
 			if (glyphIndexList.at(i) == glyphIndexListNoLigatures.at(i)) {
 				break;
 			}
@@ -426,11 +498,53 @@ static QVector<uint32_t> RemoveLigaturesUnderCursor(
 			glyphIndexList.data()[i] = glyphIndexListNoLigatures[i];
 		}
 
-		return glyphIndexList;
+		glyphRunOut.setGlyphIndexes(glyphIndexList);
 	}
+	// Encoding Scheme: 1 Glyph per Ligature, Operator Mono
+	else {
 
-	// No glyph changes required
-	return {};
+		// FIXME This block is convoluted! Ugly...
+		int cursorGlyphPos{ 0 };
+		const double cursorPixelPos{ glyphPositionList[0].x() + cellWidth * cursorTextPos };
+		for (auto pos : glyphPositionList) {
+
+			if (pos.x() > cursorPixelPos)
+			{
+				break;
+			}
+
+			cursorGlyphPos++;
+		}
+		cursorGlyphPos--;
+
+		if (glyphIndexListNoLigatures[cursorTextPos] == glyphIndexList[cursorGlyphPos]) {
+			// No glyph changes required
+			return;
+		}
+
+		int glyphSize{ 1 };
+		if (cursorGlyphPos + 1 < glyphPositionList.size()) {
+			glyphSize = (glyphPositionList[cursorGlyphPos + 1].x() - glyphPositionList[cursorGlyphPos].x()) / cellWidth;
+		}
+		else {
+			glyphSize = textGlyphRun.size() - glyphPositionList[cursorGlyphPos].x() / cellWidth;
+		}
+
+		int glyphStartTextPos = glyphPositionList[cursorGlyphPos].x() / cellWidth;
+
+		glyphIndexList[cursorGlyphPos] = glyphIndexListNoLigatures[glyphStartTextPos];
+		for (int i=1;i<glyphSize;i++) {
+			glyphIndexList.insert(cursorGlyphPos + i, glyphIndexListNoLigatures[glyphStartTextPos + i]);
+
+			QPointF pos{ glyphPositionList[cursorGlyphPos] };
+			pos.setX(pos.x() + i * cellWidth);
+
+			glyphPositionList.insert(cursorGlyphPos + i, pos);
+		}
+
+		glyphRunOut.setGlyphIndexes(glyphIndexList);
+		glyphRunOut.setPositions(glyphPositionList);
+	}
 }
 
 void ShellWidget::paintForegroundTextBlock(
@@ -463,6 +577,8 @@ void ShellWidget::paintForegroundTextBlock(
 	line.setNumColumns(text.length());
 	textLayout.endLayout();
 
+	// FIXME glyphsRendered is probably meaningless with Operator-Mono type fonts.
+	// We need a way to computer the number of characters rendered. Is this even possible?
 	int glyphsRendered{ 0 };
 	for (auto& glyphRun : textLayout.glyphRuns()) {
 		auto glyphPositionList{ glyphRun.positions() };
@@ -473,10 +589,7 @@ void ShellWidget::paintForegroundTextBlock(
 
 		// When characters are rendered as a string, they may not be uniformly
 		// distributed. Check for even spacing and redistribute as necessary.
-		if (!AreGlyphPositionsUniform(glyphPositionList, cellWidth)) {
-			glyphRun.setPositions(
-				DistributeGlyphPositions(std::move(glyphPositionList), cellWidth));
-		}
+		DistributeGlyphPositions(glyphRun, text, cellWidth);
 
 		const bool isCursorVisibleInGlyphRun{ cursorPos >= 0
 			&& cursorPos < sizeGlyphRun + glyphsRendered
@@ -491,22 +604,23 @@ void ShellWidget::paintForegroundTextBlock(
 
 		// When the cursor IS within the glyph run, decompose individual characters under the cursor.
 		const int cursorGlyphRunPos { cursorPos - glyphsRendered };
-		const QString textGlyphRun{ QStringRef{ &text, glyphsRendered, sizeGlyphRun }.toString() };
+		// FIXME Is a multi QGlyphRun layout possible? If so, this is incomplete...
+		const QString textGlyphRun{ text };
+		//            textGlyphRun{ QStringRef{ &text, glyphsRendered, sizeGlyphRun }.toString() };
 
 		// Compares a glyph run with and without ligatures. Ligature glyphs are detected as differences
 		// in these two lists. A non-empty newCursorGlyphList indicates glyph substitution is required.
-		const auto newCursorGlyphList { RemoveLigaturesUnderCursor(glyphRun, textGlyphRun, cursorGlyphRunPos) };
-		if (!newCursorGlyphList.empty()) {
-			glyphRun.setGlyphIndexes(newCursorGlyphList);
-		}
+		RemoveLigaturesUnderCursor(glyphRun, textGlyphRun, cursorGlyphRunPos, cellWidth);
 
 		p.drawGlyphRun(pos, glyphRun);
 		glyphsRendered += sizeGlyphRun;
 
+		QPoint cursorGlyphPos{ cellWidth * cursorGlyphRunPos, static_cast<int>(glyphRun.positions().at(0).y()) };
+
 		const QRect cursorCellRect{ neovimCursorRect() };
 		paintNeovimCursorBackground(p, cursorCellRect);
 		paintNeovimCursorForeground(
-			p, cursorCellRect, glyphRun.positions().at(cursorGlyphRunPos).toPoint() + pos,
+			p, cursorCellRect, cursorGlyphPos + pos,
 			textGlyphRun.at(cursorGlyphRunPos));
 	}
 }
