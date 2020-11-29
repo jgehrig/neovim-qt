@@ -1354,6 +1354,22 @@ void Shell::wheelEvent(QWheelEvent *ev)
 	const QString evString{ GetWheelEventStringAndSetScrollRemainder(
 		*ev, m_scrollDeltaRemainder, cellSize()) };
 
+	qDebug() << ev;
+	qDebug() << "  angleDelta:" << ev->angleDelta();
+	qDebug() << "  button:" << ev->buttons();
+	qDebug() << "  globalPosition:" << ev->globalPosition();
+	qDebug() << "  inverted:" << ev->inverted();
+	qDebug() << "  phase:" << ev->phase();
+	qDebug() << "  pixelDelta:" << ev->pixelDelta();
+	qDebug() << "  position:" << ev->position();
+	qDebug() << "  source:" << ev->source();
+	qDebug() << "  deltasPerStep:" << QWheelEvent::DefaultDeltasPerStep;
+	qDebug() << "  m_scrollDeltaRemainder:" << QWheelEvent::DefaultDeltasPerStep;
+	if (!evString.isEmpty()) {
+		qDebug() << "  evString:" << evString;
+	}
+	qDebug();
+
 	if (evString.isEmpty()) {
 		return;
 	}
