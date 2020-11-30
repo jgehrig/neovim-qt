@@ -1,5 +1,7 @@
-#include <QtTest/QtTest>
+#include <gui/input.h>
 #include <gui/shell.h>
+#include <QtTest/QtTest>
+
 #include "common.h"
 
 #if defined(Q_OS_WIN) && defined(USE_STATIC_QT)
@@ -20,19 +22,14 @@ class TestScroll : public QObject
 	Q_OBJECT
 
 private slots:
-	// FIXME Comment
 	void ScrollUp() noexcept;
-	void ScrollUpDown() noexcept;
+	void ScrollDown() noexcept;
 	void ScrollLeft() noexcept;
-	void ScrollLeftRight() noexcept;
-
-	// FIXME Comment
+	void ScrollRight() noexcept;
 	void ScrollDiagonal() noexcept;
+	void ScrollAccumulation() noexcept;
 	void ScrollModifiers() noexcept;
-
-	// FIXME Comment
 	void ScrollHighResolution() noexcept;
-	void ScrollLowResolution() noexcept;
 	void ScrollInvertedEvents() noexcept;
 };
 
@@ -52,11 +49,159 @@ static void RepeatWheelEventsNTimesAndAssertEmpty(
 
 void TestScroll::ScrollUp() noexcept
 {
-	QWheelEvent evScrollUp{
+	const QWheelEvent evScrollUp{
 		QPointF{ 100.0, 100.0 } /*pos*/,
 		QPointF{ 200.0, 200.0 } /*globalPos*/,
 		QPoint{ 0, 0 } /*pixelDelta*/,
-		QPoint{ 0, 8 } /*angleDelta*/,
+		QPoint{ 0, scrollEventSize } /*angleDelta*/,
+		Qt::NoButton /*buttons*/,
+		Qt::NoModifier/*modifiers*/,
+		Qt::NoScrollPhase,
+		false /*inverted*/
+	};
+
+	QPoint scrollRemainder{ 100, 0 };
+
+	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollUp } );
+
+	const QString evStringScrollUp{ Shell::GetWheelEventStringAndSetScrollRemainder(
+		evScrollUp, scrollRemainder, cellSize, deltasPerStep) };
+
+	QCOMPARE(evStringScrollUp, QString{ "<ScrollWheelUp><10,10>" });
+}
+
+void TestScroll::ScrollDown() noexcept
+{
+	const QWheelEvent evScrollDown{
+		QPointF{ 120.0, 199.0 } /*pos*/,
+		QPointF{ 200.0, 200.0 } /*globalPos*/,
+		QPoint{ 0, 0 } /*pixelDelta*/,
+		QPoint{ 0, -scrollEventSize } /*angleDelta*/,
+		Qt::NoButton /*buttons*/,
+		Qt::NoModifier /*modifiers*/,
+		Qt::NoScrollPhase,
+		false /*inverted*/
+	};
+
+	QPoint scrollRemainder{ 100, 0 };
+
+	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollDown } );
+
+	const QString evStringScrollDown{ Shell::GetWheelEventStringAndSetScrollRemainder(
+		evScrollDown, scrollRemainder, cellSize, deltasPerStep) };
+
+	QCOMPARE(evStringScrollDown, QString{ "<ScrollWheelDown><12,19>" });
+}
+
+void TestScroll::ScrollLeft() noexcept
+{
+	const QWheelEvent evScrollLeft{
+		QPointF{ 9.0, 5.0 } /*pos*/,
+		QPointF{ 200.0, 200.0 } /*globalPos*/,
+		QPoint{ 0, 0 } /*pixelDelta*/,
+		QPoint{ scrollEventSize, 0 } /*angleDelta*/,
+		Qt::NoButton /*buttons*/,
+		Qt::NoModifier /*modifiers*/,
+		Qt::NoScrollPhase,
+		false /*inverted*/
+	};
+
+	QPoint scrollRemainder{ 0, 100 };
+
+	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollLeft});
+
+	const QString evStringScrollLeft{ Shell::GetWheelEventStringAndSetScrollRemainder(
+		evScrollLeft, scrollRemainder, cellSize, deltasPerStep) };
+
+	QCOMPARE(evStringScrollLeft, QString{ "<ScrollWheelLeft><0,0>" });
+}
+
+void TestScroll::ScrollRight() noexcept
+{
+	const QWheelEvent evScrollRight{
+		QPointF{ 300.0, 150.0 } /*pos*/,
+		QPointF{ 200.0, 200.0 } /*globalPos*/,
+		QPoint{ 0, 0 } /*pixelDelta*/,
+		QPoint{ -scrollEventSize, 0 } /*angleDelta*/,
+		Qt::NoButton /*buttons*/,
+		Qt::NoModifier /*modifiers*/,
+		Qt::NoScrollPhase,
+		false /*inverted*/
+	};
+
+	QPoint scrollRemainder{ 0, 100 };
+
+	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollRight });
+
+	const QString evStringScrollRight{ Shell::GetWheelEventStringAndSetScrollRemainder(
+		evScrollRight, scrollRemainder, cellSize, deltasPerStep) };
+
+	QCOMPARE(evStringScrollRight, QString{ "<ScrollWheelRight><30,15>" });
+}
+
+void TestScroll::ScrollDiagonal() noexcept
+{
+	// Combined Event: Up + Left
+	const QWheelEvent evScrollUpLeft{
+		QPointF{ 100.0, 100.0 } /*pos*/,
+		QPointF{ 200.0, 200.0 } /*globalPos*/,
+		QPoint{ 0, 0 } /*pixelDelta*/,
+		QPoint{ scrollEventSize, scrollEventSize } /*angleDelta*/,
+		Qt::NoButton /*buttons*/,
+		Qt::NoModifier /*modifiers*/,
+		Qt::NoScrollPhase,
+		false /*inverted*/
+	};
+
+	QPoint scrollRemainder{ 0, 0 };
+
+	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollUpLeft });
+
+	const QString evStringScrollUpLeft{ Shell::GetWheelEventStringAndSetScrollRemainder(
+		evScrollUpLeft, scrollRemainder, cellSize, deltasPerStep) };
+
+	QCOMPARE(evStringScrollUpLeft, QString{ "<ScrollWheelUp><10,10><ScrollWheelLeft><10,10>" });
+
+	// Combined Event: Down + Right
+	const QWheelEvent evScrollDownRight{
+		QPointF{ 100.0, 100.0 } /*pos*/,
+		QPointF{ 200.0, 200.0 } /*globalPos*/,
+		QPoint{ 0, 0 } /*pixelDelta*/,
+		QPoint{ -scrollEventSize, -scrollEventSize } /*angleDelta*/,
+		Qt::NoButton /*buttons*/,
+		Qt::NoModifier /*modifiers*/,
+		Qt::NoScrollPhase,
+		false /*inverted*/
+	};
+
+	scrollRemainder = { 0, 0 };
+
+	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollDownRight});
+
+	const QString evStringScrollDownRight{ Shell::GetWheelEventStringAndSetScrollRemainder(
+		evScrollDownRight, scrollRemainder, cellSize, deltasPerStep) };
+
+	QCOMPARE(evStringScrollDownRight, QString{ "<ScrollWheelDown><10,10><ScrollWheelRight><10,10>" });
+}
+
+void TestScroll::ScrollAccumulation() noexcept
+{
+	const QWheelEvent evScrollUp{
+		QPointF{ 100.0, 100.0 } /*pos*/,
+		QPointF{ 200.0, 200.0 } /*globalPos*/,
+		QPoint{ 0, 0 } /*pixelDelta*/,
+		QPoint{ 0, scrollEventSize } /*angleDelta*/,
+		Qt::NoButton /*buttons*/,
+		Qt::NoModifier/*modifiers*/,
+		Qt::NoScrollPhase,
+		false /*inverted*/
+	};
+
+	const QWheelEvent evScrollDown{
+		QPointF{ 200.0, 200.0 } /*pos*/,
+		QPointF{ 200.0, 200.0 } /*globalPos*/,
+		QPoint{ 0, 0 } /*pixelDelta*/,
+		QPoint{ 0, -scrollEventSize } /*angleDelta*/,
 		Qt::NoButton /*buttons*/,
 		Qt::NoModifier/*modifiers*/,
 		Qt::NoScrollPhase,
@@ -65,102 +210,76 @@ void TestScroll::ScrollUp() noexcept
 
 	QPoint scrollRemainder;
 
-	// FIXME Comment Basic Up Scroll, Modifier keys Shift
-	scrollRemainder = { 0, 0 };
-	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollUp } );
+	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollUp, evScrollDown, evScrollUp });
 
-	const QString evStringUpShift{ Shell::GetWheelEventStringAndSetScrollRemainder(
+	const QString evStringScrollUp{ Shell::GetWheelEventStringAndSetScrollRemainder(
 		evScrollUp, scrollRemainder, cellSize, deltasPerStep) };
 
-	QCOMPARE(evStringUpShift, QString{ "<S-ScrollWheelUp><10,10>" });
-
-	// FIXME Comment 1 Down, 1 Up, 1 Down, change in direction does not reset remainder
-	scrollRemainder = { 0, 0 };
-
-	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder,
-		{ evScrollDown, evScrollUp, evScrollDown });
-
-	// FIXME name?
-	const QString evStringDownUp{ Shell::GetWheelEventStringAndSetScrollRemainder(
-		evScrollDown, scrollRemainder, cellSize, deltasPerStep) };
-
-	QCOMPARE(evStringDownUp, QString{ "<ScrollWheelDown><10,10>" });
+	QCOMPARE(evStringScrollUp, QString{ "<ScrollWheelUp><10,10>" });
 }
 
-void TestScroll::ScrollDown() noexcept
+void TestScroll::ScrollModifiers() noexcept
 {
-	QWheelEvent evScrollDown{
-		QPointF{ 100.0, 100.0 } /*pos*/,
+	// Shift Modifier
+	const QWheelEvent evScrollShiftDown{
+		QPointF{ 0.0, 0.0 } /*pos*/,
 		QPointF{ 200.0, 200.0 } /*globalPos*/,
 		QPoint{ 0, 0 } /*pixelDelta*/,
-		QPoint{ 0, -8 } /*angleDelta*/,
+		QPoint{ 0, -deltasPerStep} /*angleDelta*/,
 		Qt::NoButton /*buttons*/,
-		Qt::NoModifier /*modifiers*/,
-		Qt::NoScrollPhase,
-		false /*inverted*/
-	};
-
-	// FIXME Comment Basic Down Scroll, small events sum to single Neovim scroll message
-	QPoint scrollRemainder{ 0, 0 };
-
-	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollDown } );
-
-	const QString evStringDown{ Shell::GetWheelEventStringAndSetScrollRemainder(
-		evScrollDown, scrollRemainder, cellSize, deltasPerStep) };
-
-	QCOMPARE(evStringDown, QString{ "<ScrollWheelDown><10,10>" });
-}
-
-void TestScroll::ScrollLeftRight() noexcept
-{
-	QWheelEvent evScrollRight{
-		QPointF{ 100.0, 100.0 } /*pos*/,
-		QPointF{ 200.0, 200.0 } /*globalPos*/,
-		QPoint{ 0, 0 } /*pixelDelta*/,
-		QPoint{ 8, 0 } /*angleDelta*/,
-		Qt::NoButton /*buttons*/,
-		Qt::NoModifier /*modifiers*/,
-		Qt::NoScrollPhase,
-		false /*inverted*/
-	};
-
-	QWheelEvent evScrollLeft{
-		QPointF{ 100.0, 100.0 } /*pos*/,
-		QPointF{ 200.0, 200.0 } /*globalPos*/,
-		QPoint{ 0, 0 } /*pixelDelta*/,
-		QPoint{ -8, 0 } /*angleDelta*/,
-		Qt::NoButton /*buttons*/,
-		Qt::ShiftModifier /*modifiers*/,
+		Qt::ShiftModifier/*modifiers*/,
 		Qt::NoScrollPhase,
 		false /*inverted*/
 	};
 
 	QPoint scrollRemainder;
 
-	// FIXME Comment
-	scrollRemainder = { 0, 0 };
-	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollRight});
+	const QString evStringScrollShiftDown{ Shell::GetWheelEventStringAndSetScrollRemainder(
+		evScrollShiftDown, scrollRemainder, cellSize, deltasPerStep) };
 
-	const QString evStringRight{ Shell::GetWheelEventStringAndSetScrollRemainder(
-		evScrollRight, scrollRemainder, cellSize, deltasPerStep) };
+	QCOMPARE(evStringScrollShiftDown, QString{ "<S-ScrollWheelDown><0,0>" });
 
-	QCOMPARE(evStringRight, QString{ "<ScrollWheelRight><10,10>" });
+	// Control Modifier
+	const QWheelEvent evScrollCtrlDown{
+		QPointF{ 0.0, 0.0 } /*pos*/,
+		QPointF{ 200.0, 200.0 } /*globalPos*/,
+		QPoint{ 0, 0 } /*pixelDelta*/,
+		QPoint{ 0, -deltasPerStep} /*angleDelta*/,
+		Qt::NoButton /*buttons*/,
+		Input::ControlModifier() /*modifiers*/,
+		Qt::NoScrollPhase,
+		false /*inverted*/
+	};
 
-	// FIXME Comment Basic Down Scroll, small events sum to single Neovim scroll message
-	scrollRemainder = { 0, 0 };
-	RepeatWheelEventsNTimesAndAssertEmpty(eventsPerScroll - 1, scrollRemainder, { evScrollLeft});
+	const QString evStringScrollCtrlDown{ Shell::GetWheelEventStringAndSetScrollRemainder(
+		evScrollCtrlDown, scrollRemainder, cellSize, deltasPerStep) };
 
-	const QString evStringDown{ Shell::GetWheelEventStringAndSetScrollRemainder(
-		evScrollLeft, scrollRemainder, cellSize, deltasPerStep) };
+	QCOMPARE(evStringScrollCtrlDown, QString{ "<C-ScrollWheelDown><0,0>" });
 
-	QCOMPARE(evStringDown, QString{ "<S-ScrollWheelLeft><10,10>" });
-}
+	// Alt Modifier
+	const QWheelEvent evScrollAltDown{
+		QPointF{ 0.0, 0.0 } /*pos*/,
+		QPointF{ 200.0, 200.0 } /*globalPos*/,
+		QPoint{ 0, 0 } /*pixelDelta*/,
+		QPoint{ 0, -deltasPerStep} /*angleDelta*/,
+		Qt::NoButton /*buttons*/,
+		Qt::AltModifier /*modifiers*/,
+		Qt::NoScrollPhase,
+		false /*inverted*/
+	};
 
-void TestScroll::ScrollDiagonal() noexcept
-{
+	const QString evStringScrollAltDown{ Shell::GetWheelEventStringAndSetScrollRemainder(
+		evScrollAltDown, scrollRemainder, cellSize, deltasPerStep) };
+
+	QCOMPARE(evStringScrollAltDown, QString{ "<A-ScrollWheelDown><0,0>" });
 }
 
 void TestScroll::ScrollHighResolution() noexcept
+{
+	QVERIFY(false);
+}
+
+void TestScroll::ScrollInvertedEvents() noexcept
 {
 	QVERIFY(false);
 }
