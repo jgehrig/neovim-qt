@@ -538,7 +538,7 @@ static void RemoveLigaturesUnderCursorGlyphPerLigature(
 	// Find the cursor index with respect to the QGlyphRun using text position index.
 	const int cursorGlyphPos{ GetCursorPositionGlyphPerLigature(cellWidth, cursorTextPos, glyphPositionList) };
 
-	if (!IsValidIndex(glyphIndexList, cursorGlyphPos)) {
+	if (!IsValidIndex(glyphIndexList, cursorGlyphPos) || !IsValidIndex(glyphIndexListNoLigatures, cursorTextPos)) {
 		return;
 	}
 
