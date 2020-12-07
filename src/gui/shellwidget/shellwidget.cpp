@@ -498,7 +498,7 @@ static int GetCursorPositionGlyphPerLigature(
 	int cursorTextPos,
 	const QVector<QPointF>& glyphPositionList) noexcept
 {
-	int cursorGlyphPos{ 0 };
+	int cursorGlyphPos{ -1 };
 	const double cursorPixelPos{ glyphPositionList[0].x() + cellWidth * cursorTextPos };
 	for (auto pos : glyphPositionList) {
 
@@ -508,7 +508,6 @@ static int GetCursorPositionGlyphPerLigature(
 
 		cursorGlyphPos++;
 	}
-	cursorGlyphPos--; // FIXME this is awkward.
 	return cursorGlyphPos;
 }
 
@@ -525,11 +524,6 @@ static int GetGlyphSizeGlyphPerLigature(
 	return textGlyphRun.size() - glyphPositionList[cursorGlyphPos].x() / cellWidth;
 }
 
-// FIXME Still not quite right... Ex)
-// 1. Fill entire line with spaces.
-// 2. Make line end with ligature, "->"
-// 3. place cursor on -, visible
-// 4. place cursor on >, disappear! Wrong!
 static void RemoveLigaturesUnderCursorGlyphPerLigature(
 	QGlyphRun& glyphRunOut,
 	const QString& textGlyphRun,
@@ -539,11 +533,14 @@ static void RemoveLigaturesUnderCursorGlyphPerLigature(
 {
 	auto glyphIndexList{ glyphRunOut.glyphIndexes() };
 	auto glyphPositionList{ glyphRunOut.positions() };
-	qDebug() << "RemoveLigaturesUnderCursorGlyphPerLigature!";
 
 	// The cursor position within the text and QGlyphRun differ.
 	// Find the cursor index with respect to the QGlyphRun using text position index.
 	const int cursorGlyphPos{ GetCursorPositionGlyphPerLigature(cellWidth, cursorTextPos, glyphPositionList) };
+
+	if (!IsValidIndex(glyphIndexList, cursorGlyphPos)) {
+		return;
+	}
 
 	// Check if the cursor is within a glyph, if not exit early
 	if (glyphIndexListNoLigatures[cursorTextPos] == glyphIndexList[cursorGlyphPos]) {
@@ -553,6 +550,10 @@ static void RemoveLigaturesUnderCursorGlyphPerLigature(
 	const int glyphStartPos{ static_cast<int>(glyphPositionList[cursorGlyphPos].x() / cellWidth) };
 	const int glyphSize{ GetGlyphSizeGlyphPerLigature(
 		cursorGlyphPos, cellWidth, textGlyphRun, glyphPositionList) };
+
+	if (!IsValidIndex(glyphIndexListNoLigatures, glyphStartPos)) {
+		return;
+	}
 
 	// Cursor is within a glyph. This single glyph/ligature needs to be decomposed into individual character glyphs.
 	glyphIndexList[cursorGlyphPos] = glyphIndexListNoLigatures[glyphStartPos];
@@ -596,6 +597,68 @@ static void RemoveLigaturesUnderCursorGlyphPerLigature(
 	}
 }
 
+QList<QGlyphRun> ShellWidget::GetGlyphRunListForTextBlock(
+	QPainter& p,
+	QRect blockRect,
+	const QString& text,
+	const QFont& blockFont) noexcept
+{
+	QTextLayout textLayout{ text, blockFont, p.device() };
+	textLayout.setCacheEnabled(true);
+	textLayout.beginLayout();
+
+	QTextLine line{ textLayout.createLine() };
+	if (!line.isValid()) {
+		return {};
+	}
+
+	line.setNumColumns(text.length());
+
+	textLayout.endLayout();
+
+	return textLayout.glyphRuns();
+}
+
+static QVector<QString> SplitTextByGlyphRun(
+	const QString& text,
+	QSize cellSize,
+	const QList<QGlyphRun>& glyphRunList) noexcept
+{
+	if (glyphRunList.size() == 1) {
+		return { text };
+	}
+
+	QVector<QString> result;
+	result.reserve(glyphRunList.size());
+
+	int totalGlyphCount{ 0 };
+	for (const auto& glyphRun : glyphRunList) {
+		totalGlyphCount += glyphRun.glyphIndexes().size();
+	}
+
+	// Case: Direct mapping between cursor and ligature.
+	// This block may or may not be valid, can we guarantee `glyphRunList` ordering?
+	if (totalGlyphCount == text.size()) {
+		// Split `text` into `glyphRun` sized parts
+		int glyphsAddedAlready{ 0 };
+		for (const auto& glyphRun : glyphRunList) {
+			const int sizeGlyphRun{ glyphRun.glyphIndexes().size() };
+			result.append(QStringRef{ &text, glyphsAddedAlready, sizeGlyphRun }.toString());
+			glyphsAddedAlready += sizeGlyphRun;
+		}
+
+		return result;
+	}
+
+	// Unrecognized QGlyphRun format, this case may be unexpected but correctable.
+	// Users seeing this error may want to file a bug to have the scenario corrected.
+	qDebug() << "Unable to split QGlyphRun into text segments!";
+	qDebug() << "  text:" << text;
+
+	result.resize(glyphRunList.size());
+	return result;
+}
+
 void ShellWidget::paintForegroundTextBlock(
 	QPainter& p,
 	const Cell& cell,
@@ -616,71 +679,52 @@ void ShellWidget::paintForegroundTextBlock(
 	const int cellTextOffset{ m_lineSpace / 2 };
 	const QPoint pos{ blockRect.left(), blockRect.top() + cellTextOffset };
 
-	QTextLayout textLayout{ text, blockFont, p.device() };
-	textLayout.setCacheEnabled(true);
-	textLayout.beginLayout();
-	QTextLine line = textLayout.createLine();
-	if (!line.isValid()) {
+	auto glyphRunList{ GetGlyphRunListForTextBlock(p, blockRect, text, blockFont) };
+	auto glyphRunTextList{ SplitTextByGlyphRun(text, m_cellSize, glyphRunList) };
+
+	if (glyphRunList.size() != glyphRunTextList.size()) {
+		qDebug() << "Each QGlyphRun must contain matching text!";
 		return;
 	}
-	line.setNumColumns(text.length());
-	textLayout.endLayout();
 
-	// FIXME glyphsRendered is probably meaningless with Operator-Mono type fonts.
-	// We need a way to computer the number of characters rendered. Is this even possible?
+	int textIndex{ 0 };
 	int glyphsRendered{ 0 };
-	auto foo{ textLayout.glyphRuns() };
-	if (foo.size() > 1) {
-		int idx{ 1 };
-		for (auto glyphRun : foo) {
-			qDebug() << QString{ "%1/%2" }.arg(idx++).arg(foo.size());
-			qDebug() << text;
-			qDebug() << "  " << glyphRun.positions();
-			qDebug() << "  " << glyphRun.glyphIndexes();
-		}
-	}
-	for (auto& glyphRun : textLayout.glyphRuns()) {
+	for (auto& glyphRun : glyphRunList) {
 		auto glyphPositionList{ glyphRun.positions() };
-		int sizeGlyphRun{ glyphPositionList.size() };
+		auto glyphRunText{ glyphRunTextList[textIndex++] };
+		glyphsRendered += glyphRunText.size();
 
 		const int cellWidth{ (cell.IsDoubleWidth()) ?
 			m_cellSize.width() * 2 : m_cellSize.width() };
 
-		// When characters are rendered as a string, they may not be uniformly
-		// distributed. Check for even spacing and redistribute as necessary.
-		DistributeGlyphPositions(glyphRun, text, cellWidth);
+		// Characters may not be rendered uniformly, redistribute as necessary.
+		DistributeGlyphPositions(glyphRun, glyphRunText, cellWidth);
 
 		const bool isCursorVisibleInGlyphRun{ cursorPos >= 0
-			&& cursorPos < sizeGlyphRun + glyphsRendered
-			&& cursorPos >= glyphsRendered };
+			&& cursorPos < glyphsRendered
+			&& cursorPos >= glyphsRendered - glyphRunText.size() };
 
-		// When the cursor is NOT within the glyph run, render as-is.
-		if (!isCursorVisibleInGlyphRun) {
+		// The QGlyphRun is rendered as-is when no cursor is present.
+		if (glyphRunText.isEmpty() || !isCursorVisibleInGlyphRun) {
 			p.drawGlyphRun(pos, glyphRun);
-			glyphsRendered += sizeGlyphRun;
 			continue;
 		}
 
-		// When the cursor IS within the glyph run, decompose individual characters under the cursor.
-		const int cursorGlyphRunPos { cursorPos - glyphsRendered };
-		// FIXME Is a multi QGlyphRun layout possible? If so, this is incomplete...
-		const QString textGlyphRun{ text };
-		//            textGlyphRun{ QStringRef{ &text, glyphsRendered, sizeGlyphRun }.toString() };
-
-		// Compares a glyph run with and without ligatures. Ligature glyphs are detected as differences
-		// in these two lists. A non-empty newCursorGlyphList indicates glyph substitution is required.
-		RemoveLigaturesUnderCursor(glyphRun, textGlyphRun, cursorGlyphRunPos, cellWidth);
+		// The cursor is within the QGlyphRun: decompose individual characters under the cursor.
+		const int cursorPosInGlyphRun{ cursorPos - (glyphsRendered - glyphRunText.size())};
+		RemoveLigaturesUnderCursor(glyphRun, glyphRunText, cursorPosInGlyphRun, cellWidth);
 
 		p.drawGlyphRun(pos, glyphRun);
-		glyphsRendered += sizeGlyphRun;
+	}
 
-		QPoint cursorGlyphPos{ cellWidth * cursorGlyphRunPos, static_cast<int>(glyphRun.positions().at(0).y()) };
+	// Draw the Neovim cursor, if present in text block.
+	if (IsValidIndex(text, cursorPos)) {
+		const QPoint cursorDrawPos{
+			blockRect.left() + (m_cellSize.width() * cursorPos),
+			blockRect.top() + m_ascent + (m_lineSpace / 2) };
 
-		const QRect cursorCellRect{ neovimCursorRect() };
-		paintNeovimCursorBackground(p, cursorCellRect);
-		paintNeovimCursorForeground(
-			p, cursorCellRect, cursorGlyphPos + pos,
-			textGlyphRun.at(cursorGlyphRunPos));
+		paintNeovimCursorBackground(p, neovimCursorRect());
+		paintNeovimCursorForeground(p, neovimCursorRect(), cursorDrawPos, text.at(cursorPos));
 	}
 }
 

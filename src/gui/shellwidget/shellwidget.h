@@ -101,6 +101,13 @@ public:
 		int cellWidth,
 		const QVector<uint32_t>* glyphIndexListNoLigaturesOverride = nullptr) noexcept;
 
+	/// FIXME Comment
+	QList<QGlyphRun> GetGlyphRunListForTextBlock(
+		QPainter& p,
+		QRect blockRect,
+		const QString& text,
+		const QFont& blockFont) noexcept;
+
 signals:
 	void shellFontChanged();
 	void fontError(const QString& msg);
