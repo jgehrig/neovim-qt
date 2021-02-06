@@ -246,14 +246,6 @@ private:
 	bool m_mouseEnabled{ true };
 };
 
-class ShellRequestHandler: public QObject, public MsgpackRequestHandler
-{
-	Q_OBJECT
-public:
-	ShellRequestHandler(Shell *parent);
-	virtual void handleRequest(MsgpackIODevice* dev, quint32 msgid, const QByteArray& method, const QVariantList& args);
-};
-
 template <class T>
 /*static*/ void Shell::DispatchRedrawNotifications(T* pThis, const QVariantList& args) noexcept
 {
