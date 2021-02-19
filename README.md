@@ -52,9 +52,9 @@ https://github.com/jgehrig/gentoo/tree/master/app-editors/neovim-qt
 
 Alternatively, you can add the entire overlay:
 ```
-# eselect repository add jgehrig git https://github.com/jgehrig/gentoo.git
-# emerge --sync
-# emerge -av neovim-qt
+$ eselect repository add jgehrig git https://github.com/jgehrig/gentoo.git
+$ emerge --sync
+$ emerge -av neovim-qt
 ```
 
 #### OpenSuse
@@ -163,7 +163,7 @@ You can disable this feature:
 
 ### Why does guifont throw an error?
 
-You may see errors:
+You may see these errors:
 	- `{Font Name} is not a fixed pitch Font`
 	- ` Warning: Font {Font Name} reports bad fixed pitch metrics`
 
@@ -203,4 +203,3 @@ $ NVIM_QT_RUNTIME_PATH=../src/gui/runtime bin/nvim-qt
 ```
 
 Note, the environment variable `NVIM_QT_RUNTIME` must be set for commands like `:GuiFont` to work.
-
