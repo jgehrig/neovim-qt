@@ -51,7 +51,7 @@ $ brew install neovim-qt
 
 Neovim Qt is packaged for many distributions, use your favorite package manager.
 
-Is your distribution not listed here? Create an Issue or Pull Request.
+If your distribution is not listed here, please create an Issue with instructions.
 
 #### ArchLinux
 
@@ -82,9 +82,9 @@ NeovimQt is available from this [Community Package](https://build.opensuse.org/p
 NeovimQt can be configured through the `ginit.vim` file.
 
 The default locations are:
-**Windows:** `%LOCALAPPDATA%\nvim\ginit.vim`
-**MacOS:** `~/.config/nvim/ginit.vim`
-**Linux:** `~/.config/nvim/ginit.vim`
+**Windows:** `%LOCALAPPDATA%\nvim\ginit.vim`  
+**MacOS:** `~/.config/nvim/ginit.vim`  
+**Linux:** `~/.config/nvim/ginit.vim`  
 
 Recommended `ginit.vim`
 ```
