@@ -6,13 +6,15 @@
 [![Downloads](https://img.shields.io/github/downloads/equalsraf/neovim-qt/total.svg?maxAge=2592000)](https://github.com/equalsraf/neovim-qt/releases)
 
 # Neovim Qt
+
 Neovim Qt is a basic GUI for Neovim written in Qt and C++. It was designed to provide a fast, consistent experience across all platforms.
 
 ![NeovimQt Screenshot](https://user-images.githubusercontent.com/11207308/108295028-f79f1b80-7164-11eb-8420-e9950fa97cd0.png)
 
 
 ## Installing Neovim Qt
-Neovim Qt is released to all major platforms. 
+
+Neovim Qt is released to all major platforms.
 
 ### Windows
 A Neovim Qt is bundled with all releases of Neovim on Windows.
@@ -31,24 +33,33 @@ choco install neovim
 
 ### MacOS
 
-You can use HomeBrew to install Neovim Qt:
+You can use HomeBrew to install Neovim Qt. See https://github.com/equalsraf/homebrew-neovim-qt.
+
+To install the latest release:
 ```
 $ brew tap equalsraf/neovim-qt
 $ brew install neovim-qt
 ```
 
-See: https://github.com/equalsraf/homebrew-neovim-qt
+To install the latest development version:
+```
+$ brew tap equalsraf/neovim-qt
+$ brew install neovim-qt
+```
 
 ### Linux
 
-Use your favorite package manager. If your favorite distro is not listed, please add it!
+Neovim Qt is packaged for many distributions, use your favorite package manager.
+
+Is your distribution not listed here? Create an Issue or Pull Request.
 
 #### ArchLinux
+
 NeovimQt is available from this [AUR Package](https://archlinux.org/packages/community/x86_64/neovim-qt/).
 
 #### Gentoo
-You can download/copy the standalone Ebuild here:
-https://github.com/jgehrig/gentoo/tree/master/app-editors/neovim-qt
+
+NeovimQt is available in this [Portage Ebuild](https://github.com/jgehrig/gentoo/blob/master/app-editors/neovim-qt/neovim-qt-9999.ebuild).
 
 Alternatively, you can add the entire overlay:
 ```
@@ -58,11 +69,12 @@ $ emerge -av neovim-qt
 ```
 
 #### OpenSuse
-A community maintained package can be found here:
-https://build.opensuse.org/package/show/home%3AAptrug/neovim-qt
+
+NeovimQt is available from this [Community Package](https://build.opensuse.org/package/show/home%3AAptrug/neovim-qt).
 
 ### Ubuntu
-`apt-get install neovim-qt`
+
+`sudo apt-get install neovim-qt`
 
 
 ## Configuration
@@ -70,9 +82,9 @@ https://build.opensuse.org/package/show/home%3AAptrug/neovim-qt
 NeovimQt can be configured through the `ginit.vim` file.
 
 The default locations are:
-**Windows:** %LOCALAPPDATA%\nvim\ginit.vim
-**MacOS:** ~/.config/nvim/ginit.vim
-**Linux:** ~/.config/nvim/ginit.vim
+**Windows:** `%LOCALAPPDATA%\nvim\ginit.vim`
+**MacOS:** `~/.config/nvim/ginit.vim`
+**Linux:** `~/.config/nvim/ginit.vim`
 
 Recommended `ginit.vim`
 ```
@@ -115,14 +127,14 @@ More detailed information can be fond on the [Configuration Wiki Page](https://g
 ## Frequently Asked Questions
 
 ### Why are the :Gui... commands missing?
-You need to load the NeovimQt runtime/plugin to register commands like `:GuiFont`.
+You need the NeovimQt runtime to use commands like `:GuiFont`.
 
 You can manually specify the path with `NVIM_QT_RUNTIME_PATH`.
 
-Alternatively, you can install the plugin/runtime:
+Alternatively, you can install the NeovimQt Plugin:
 `Plugin 'equalsraf/neovim-gui-shim`
 
-In recent versions, run `nvim-qt --version` to check if the runtime is loaded:
+On recent releases, you can check if the runtime is loaded with `nvim-qt --version`:
 ```
 $ nvim-qt --version
 NVIM-QT v0.2.16.1
@@ -136,26 +148,26 @@ Environment:
 ...
 ```
 
-Notice `runtime:` is non-empty and points to a folder containing `nvim_gui_shim.vim`.
+Notice `runtime:` is non-empty and points to a folder with `nvim_gui_shim.vim`.
 
 ### Why does :Gui... not work in init.vim?
 
-The `:Gui...` commands such as `:GuiFont` are not available in init.vim. The Gui runtime shim has not been loaded yet in this context.
+The `:Gui...` commands are not loaded when `init.vim` runs.
 
-These options should be configured in `ginit.vim`. This file can be placed in the same directory as `init.vim`.
+These options must be configured from `ginit.vim`. The file should be placed in the same directory as `init.vim`.
 
-Alternatively, you can use the standard vim options such as`:set guifont=...` directly in `init.vim`.
+Alternatively, NeovimQt responds to some vim options. You can `:set guifont=...` directly in `init.vim`.
 
 ### How do I disable the GUI Tabs?
-`:GuiTabline 0`
+Try `:GuiTabline 0`. This option can be added to `ginit.vim`.
 
 To prevent startup flicker, see [Wiki - Configuration Options](https://github.com/equalsraf/neovim-qt/wiki/Configuration-Options)
 
 ### Why does the popup menu look different?
-The popup/completion menu is rendered in Qt, instead of Neovim's canvas.
 
-You can disable this feature:
-`:GuiPopupmenu 0`
+Try `:GuiPopupmenu 0`. This option can be added to `ginit.vim`.
+
+The menu looks different because it is a widget rendered via Qt. Many users expect the `nvim` TUI (Terminal UI) menu instead.
 
 ### How do I change the font?
 `:GuiFont Fira Code:h12`
