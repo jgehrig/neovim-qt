@@ -7,14 +7,16 @@
 
 # Neovim Qt
 
-Neovim Qt is a basic GUI for Neovim written in Qt and C++. It was designed to provide a fast, consistent experience across all platforms.
+Neovim Qt is a cross-platform GUI for Neovim written in Qt and C++. It provides a simple terminal-like experience.
 
 ![NeovimQt Screenshot](https://user-images.githubusercontent.com/11207308/108295028-f79f1b80-7164-11eb-8420-e9950fa97cd0.png)
 
 
 ## Installing Neovim Qt
 
-Neovim Qt is released to all major platforms.
+Neovim Qt is available on all platforms supported by Qt.
+
+Instructions for common platforms are listed below.
 
 ### Windows
 A Neovim Qt is bundled with all releases of Neovim on Windows.
@@ -26,14 +28,23 @@ See the Neovim release page:
 
 Alternatively, you can use a package manager such as Chocolatey:
 
-See [Neovim Chocolatey Package](https://chocolatey.org/packages/neovim/):
+See the [Neovim Chocolatey Package](https://chocolatey.org/packages/neovim/) for more details.
+
+Latest Stable:
 ```
 choco install neovim
 ```
 
+Pre-Release:
+```
+choco install neovim --pre
+```
+
 ### MacOS
 
-You can use HomeBrew to install Neovim Qt. See https://github.com/equalsraf/homebrew-neovim-qt.
+You can use HomeBrew to install Neovim Qt.
+
+See https://github.com/equalsraf/homebrew-neovim-qt for more details.
 
 To install the latest release:
 ```
@@ -176,22 +187,24 @@ The menu looks different because it is a widget rendered via Qt. Many users expe
 ### Why does guifont throw an error?
 
 You may see these errors:
-	- `{Font Name} is not a fixed pitch Font`
-	- ` Warning: Font {Font Name} reports bad fixed pitch metrics`
+
+  - `{Font Name} is not a fixed pitch Font`
+  - ` Warning: Font {Font Name} reports bad fixed pitch metrics`
 
 You can override this warning with `:GuiFont! {Font Name}`.
 
-The warnings are displayed to inform you your font is not a perfect monospace font. Some characters different widths.
+These warnings displays for fonts containing variable-width characters.
 
-If you know the font you've selected is monospace font, this is usually safe to ignore.
+They are safe to ignore, but you may notice font spacing and clipping issues.
 
 ### Why is nvim unable to start?
 
-The `nvim` binary must be in your `$PATH`.
+The `nvim` binary must be in your `$PATH`. You can manually provide a path to Neovim:
+```
+nvim-qt --nvim {path_to_nvim}
+```
 
-You can manually provide a path to Neovim with `nvim-qt --nvim {path_to_nvim}`.
-
-In recent versions, run `nvim-qt --version` to check which `nvim` binary is loaded:
+In recent versions, `nvim-qt --version` reports the `nvim` binary path:
 ```
 $ nvim-qt --version
 ...
@@ -205,7 +218,7 @@ Environment:
 
 Detailed build instructions can be found at the [Wiki](https://github.com/equalsraf/neovim-qt/wiki/Build).
 
-Here is a simplified set of build commands:
+Simplified Build Commands:
 ```
 $ mkdir build
 $ cd build
@@ -214,4 +227,4 @@ $ cmake --build .
 $ NVIM_QT_RUNTIME_PATH=../src/gui/runtime bin/nvim-qt
 ```
 
-Note, the environment variable `NVIM_QT_RUNTIME` must be set for commands like `:GuiFont` to work.
+NOTE: `NVIM_QT_RUNTIME` must be set for commands such as `:GuiFont` to work.
