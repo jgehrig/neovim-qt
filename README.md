@@ -7,16 +7,14 @@
 
 # Neovim Qt
 
-Neovim Qt is a cross-platform GUI for Neovim written in Qt and C++. It provides a simple terminal-like experience.
+Neovim Qt is a cross-platform Neovim GUI written in C++ and Qt. It provides a terminal-like experience.
 
 ![NeovimQt Screenshot](https://user-images.githubusercontent.com/11207308/108295028-f79f1b80-7164-11eb-8420-e9950fa97cd0.png)
 
 
 ## Installing Neovim Qt
 
-Neovim Qt is available on all platforms supported by Qt.
-
-Instructions for common platforms are listed below.
+Neovim Qt is available on all platforms supported by Qt. Instructions for common platforms listed below.
 
 ### Windows
 A Neovim Qt is bundled with all releases of Neovim on Windows.
@@ -26,9 +24,7 @@ See the Neovim release page:
  - [Nighly Release](https://github.com/neovim/neovim/releases/nightly)
  - [Stable Release](https://github.com/neovim/neovim/releases/latest)
 
-Alternatively, you can use a package manager such as Chocolatey:
-
-See the [Neovim Chocolatey Package](https://chocolatey.org/packages/neovim/) for more details.
+Noevim is available as a [Chocolatey Package](https://chocolatey.org/packages/neovim/).
 
 Latest Stable:
 ```
@@ -42,9 +38,7 @@ choco install neovim --pre
 
 ### MacOS
 
-You can use HomeBrew to install Neovim Qt.
-
-See https://github.com/equalsraf/homebrew-neovim-qt for more details.
+You can use HomeBrew to install Neovim Qt: https://github.com/equalsraf/homebrew-neovim-qt.
 
 To install the latest release:
 ```
@@ -104,23 +98,23 @@ set mouse=a
 
 " Set Editor Font
 if exists(':GuiFont')
-	" Use GuiFont! to ignore font errors
-	GuiFont {font_name}:h{size}
+    " Use GuiFont! to ignore font errors  
+    GuiFont {font_name}:h{size}
 endif
 
 " Disable GUI Tabline
 if exists(':GuiTabline')
-	GuiTabline 0
+    GuiTabline 0
 endif
 
 " Disable GUI Popupmenu
 if exists(':GuiPopupmenu')
-	GuiPopupmenu 0
+    GuiPopupmenu 0
 endif
 
 " Enable GUI ScrollBar
 if exists(':GuiScrollBar')
-	GuiScrollBar 1
+    GuiScrollBar 1
 endif
 
 " Right Click Context Menu (Copy-Cut-Paste)
@@ -188,8 +182,8 @@ The menu looks different because it is a widget rendered via Qt. Many users expe
 
 You may see these errors:
 
-  - `{Font Name} is not a fixed pitch Font`
-  - ` Warning: Font {Font Name} reports bad fixed pitch metrics`
+- `{Font Name} is not a fixed pitch Font`
+- ` Warning: Font {Font Name} reports bad fixed pitch metrics`
 
 You can override this warning with `:GuiFont! {Font Name}`.
 
