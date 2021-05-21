@@ -104,7 +104,8 @@ void App::showUi() noexcept
 		win->show();
 	}
 #else
-	NeovimQt::MainWindow *win = new NeovimQt::MainWindow(m_connector.get());
+	NeovimConnector* connector{ connectToRemoteNeovim(m_parser) };
+	NeovimQt::MainWindow* win{ new NeovimQt::MainWindow(connector) };
 
 	// delete the main window when closed to emit `destroyed()` signal to
 	// support `:cq` return codes (Pull#644).
@@ -234,16 +235,6 @@ void App::checkArgumentsMayTerminate(QCommandLineParser& parser) noexcept
 	}
 }
 
-void App::setupRequestTimeout() noexcept
-{
-	if (!m_connector)
-	{
-		return;
-	}
-
-	m_connector->setRequestTimeout(m_parser.value("timeout").toInt());
-}
-
 /*static*/ QString App::getRuntimePath() noexcept
 {
 	QString path{ QString::fromLocal8Bit(qgetenv("NVIM_QT_RUNTIME_PATH")) };
@@ -274,36 +265,33 @@ void App::setupRequestTimeout() noexcept
 		"--cmd","set termguicolors" };
 }
 
-void App::connectToRemoteNeovim() noexcept
+/*static*/ NeovimConnector* App::connectToRemoteNeovim(const QCommandLineParser& parser) noexcept
 {
-	if (m_parser.isSet("embed")) {
-		m_connector = std::unique_ptr<NeovimConnector>{ NeovimQt::NeovimConnector::fromStdinOut() };
-		setupRequestTimeout();
-		return;
+	NeovimConnector* connector{ nullptr };
+
+	if (parser.isSet("embed")) {
+		connector = NeovimQt::NeovimConnector::fromStdinOut();
+	}
+	else if (parser.isSet("server")) {
+		QString server{ parser.value("server") };
+		connector = NeovimQt::NeovimConnector::connectToNeovim(server);
+	}
+	else if (parser.isSet("spawn") && (parser.positionalArguments().size() >= 2)) {
+		const QStringList& args{ parser.positionalArguments() };
+		connector = NeovimQt::NeovimConnector::spawn(args.mid(1), args.at(0));
+	}
+	else {
+		QStringList neovimArgs{ getNeovimArgs() };
+		neovimArgs.append(parser.positionalArguments());
+		connector = NeovimQt::NeovimConnector::spawn(neovimArgs, parser.value("nvim"));
 	}
 
-	if (m_parser.isSet("server")) {
-		QString server = m_parser.value("server");
-		m_connector = std::unique_ptr<NeovimConnector>{ NeovimQt::NeovimConnector::connectToNeovim(server) };
-		setupRequestTimeout();
-		return;
+	if (connector)
+	{
+		connector->setRequestTimeout(parser.value("timeout").toInt());
 	}
 
-	if (m_parser.isSet("spawn") && !m_parser.positionalArguments().isEmpty()) {
-		const QStringList& args = m_parser.positionalArguments();
-		m_connector = std::unique_ptr<NeovimConnector> { NeovimQt::NeovimConnector::spawn(args.mid(1), args.at(0)) };
-		setupRequestTimeout();
-		return;
-	}
-
-	QStringList neovimArgs{ getNeovimArgs() };
-
-	// Append positional file arguments to nvim.
-	neovimArgs.append(m_parser.positionalArguments());
-
-	m_connector = std::unique_ptr<NeovimConnector>{  NeovimQt::NeovimConnector::spawn(neovimArgs, m_parser.value("nvim")) };
-	setupRequestTimeout();
-	return;
+	return connector;
 }
 
 static QString GetNeovimVersionInfo(const QString& nvim) noexcept

@@ -1,5 +1,4 @@
-#ifndef NEOVIM_QT_APP
-#define NEOVIM_QT_APP
+#pragma once
 
 #include <memory>
 #include <QApplication>
@@ -20,7 +19,7 @@ public:
 	App(int &argc, char ** argv) noexcept;
 	bool event(QEvent *event) noexcept;
 	void showUi() noexcept;
-	void connectToRemoteNeovim() noexcept;
+	static NeovimConnector* connectToRemoteNeovim(const QCommandLineParser& parser) noexcept;
 	QCommandLineParser& commandLineParser() { return m_parser; }
 	static void checkArgumentsMayTerminate(QCommandLineParser&) noexcept;
 	static void processCommandlineOptions(QCommandLineParser&, QStringList) noexcept;
@@ -32,7 +31,6 @@ private:
 	static void showVersionInfo(QCommandLineParser&) noexcept;
 
 	QCommandLineParser m_parser;
-	std::shared_ptr<NeovimConnector> m_connector;
 	int m_exitStatus{ 0 };
 
 public slots:
@@ -44,5 +42,3 @@ signals:
 };
 
 } // Namespace NeovimQt
-
-#endif

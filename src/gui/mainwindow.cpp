@@ -68,6 +68,7 @@ void MainWindow::init(NeovimConnector *c)
 	m_contextMenu->addAction(m_actSelectAll);
 
 	m_nvim = c;
+	m_nvim->setParent(this);
 
 	m_tree = new TreeView(c);
 
