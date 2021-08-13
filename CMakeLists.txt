@@ -74,8 +74,6 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
 			"-modernize-use-trailing-return-type,"
 			"-modernize-use-using,"
 			"performance-*,"
-			"-performance-no-automatic-move,"
-			"-performance-unnecessary-copy-initialization,"
 			"-performance-unnecessary-value-param,"
 			"readability-*,"
 			"-readability-braces-around-statements,"

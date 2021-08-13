@@ -1788,8 +1788,8 @@ void ShellRequestHandler::handleRequest(MsgpackIODevice* dev, quint32 msgid, con
 	if (method == "Gui" && args.size() > 0) {
 		QString ctx = args.at(0).toString();
 		if (ctx == "GetClipboard" && args.size() > 1) {
-			QVariant reg = args.at(1);
-			QString reg_name = reg.toString();
+			const QVariant& reg{ args.at(1) };
+			QString reg_name{ reg.toString() };
 
 			if (reg_name != "*" && reg_name != "+") {
 				dev->sendResponse(msgid, QString("Unknown register"), QVariant());
