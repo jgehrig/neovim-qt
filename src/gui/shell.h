@@ -12,7 +12,6 @@
 
 #include "neovimconnector.h"
 #include "popupmenu.h"
-#include "popupmenumodel.h"
 #include "shelloptions.h"
 #include "shellwidget/cursor.h"
 #include "shellwidget/highlight.h"
@@ -146,15 +145,12 @@ protected:
 	virtual void handleBusy(bool);
 	virtual void handleSetOption(const QVariantList& opargs);
 	void handleExtGuiOption(const QString& name, const QVariant& value);
-	virtual void handlePopupMenuShow(const QVariantList& opargs);
-	virtual void handlePopupMenuSelect(const QVariantList& opargs);
 	virtual void handleMouse(bool);
 	virtual void handleGuiFontFunction(const QVariantList& args);
 	virtual void handleGuiFontWide(const QVariant& value) noexcept;
 	virtual void handleLineSpace(const QVariant& value) noexcept;
 	virtual void handleWindowFrameless(const QVariant& value) noexcept;
 	virtual void handleCloseEvent(const QVariantList &args) noexcept;
-	virtual void handleGuiPopupmenu(const QVariant& value) noexcept;
 
 	// Modern 'ext_linegrid' Grid UI Events
 	virtual void handleGridResize(const QVariantList& opargs);
@@ -233,7 +229,7 @@ private:
 	// Properties
 	bool m_neovimBusy{ false };
 	ShellOptions m_options;
-	PopupMenu m_pum{ this };
+	PopupMenu m_pum;
 	bool m_mouseEnabled{ true };
 };
 

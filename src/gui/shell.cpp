@@ -54,6 +54,7 @@ Shell::Shell(NeovimConnector *nvim, QWidget *parent)
 	: ShellWidget{ parent }
 	, m_nvim{ nvim }
 	, m_options{ GetShellOptionsFromQSettings() }
+	, m_pum{ nvim, *this }
 {
 	setAttribute(Qt::WA_KeyCompression, false);
 
@@ -71,10 +72,6 @@ Shell::Shell(NeovimConnector *nvim, QWidget *parent)
 	m_tooltip->setTextFormat(Qt::PlainText);
 	m_tooltip->setTextInteractionFlags(Qt::NoTextInteraction);
 	m_tooltip->setAutoFillBackground(true);
-
-	// Popupmenu
-	m_pum.setParent(this);
-	m_pum.hide();
 
 	QSettings settings;
 
@@ -581,12 +578,6 @@ void Shell::handleRedraw(const QByteArray& name, const QVariantList& opargs)
 		} else {
 			emit neovimSuspend();
 		}
-	} else if (name == "popupmenu_show") {
-		handlePopupMenuShow(opargs);
-	} else if (name == "popupmenu_select") {
-		handlePopupMenuSelect(opargs);
-	} else if (name == "popupmenu_hide") {
-		m_pum.hide();
 	} else if (name == "mode_info_set") {
 		handleModeInfoSet(opargs);
 	} else if (name == "flush") {
@@ -613,70 +604,6 @@ void Shell::handleRedraw(const QByteArray& name, const QVariantList& opargs)
 		// Uncomment for writing new event handling code.
 		// qDebug() << "Received unknown redraw notification" << name << opargs;
 	}
-}
-
-void Shell::handlePopupMenuShow(const QVariantList& opargs)
-{
-	// The 'popupmenu_show' API is not consistent across NeoVim versions!
-	// A 5th argument was introduced in neovim/neovim@16c3337
-	if (opargs.size() < 4
-		|| static_cast<QMetaType::Type>(opargs.at(0).type()) != QMetaType::QVariantList
-		|| !opargs.at(1).canConvert<int64_t>()
-		|| !opargs.at(2).canConvert<int64_t>()
-		|| !opargs.at(3).canConvert<int64_t>()) {
-		qWarning() << "Unexpected arguments for popupmenu_show:" << opargs;
-		return;
-	}
-	else if (opargs.size() >= 5 && !opargs.at(4).canConvert<int64_t>()) {
-		qWarning() << "Unexpected 5th argument for popupmenu_show:" << opargs.at(4);
-		return;
-	}
-
-	const QVariantList items = opargs.at(0).toList();
-	const int64_t selected = opargs.at(1).toULongLong();
-	const int64_t row = opargs.at(2).toULongLong();
-	const int64_t col = opargs.at(3).toULongLong();
-	//const int64_t grid = (opargs.size() < 5) ? 0 : opargs.at(4).toULongLong();
-
-	QList<PopupMenuItem> model;
-	for (const auto& v : items) {
-		QVariantList item = v.toList();
-		// Item is (text, kind, extra, info)
-		if (item.size() < 4
-			|| item.isEmpty()
-			|| item.value(0).toString().isEmpty()) {
-
-			// Usually faster/smaller to init strings with {} instead of ""
-			model.append({ QString{}, QString{}, QString{}, QString{} });
-			continue;
-		}
-
-		model.append({
-			item.value(0).toString(),
-			item.value(1).toString(),
-			item.value(2).toString(),
-			item.value(3).toString() });
-	}
-
-	m_pum.setModel(new PopupMenuModel(model));
-
-	m_pum.setSelectedIndex(selected);
-
-	m_pum.setAnchor(row, col);
-	m_pum.updateGeometry();
-	m_pum.show();
-}
-
-void Shell::handlePopupMenuSelect(const QVariantList& opargs)
-{
-	if (opargs.size() < 1
-		|| !opargs.at(0).canConvert<int64_t>()) {
-		qWarning() << "Unexpected arguments for popupmenu_select:" << opargs;
-		return;
-	}
-
-	// Neovim and Qt both use -1 for 'no selection'.
-	m_pum.setSelectedIndex(opargs.at(0).toLongLong());
 }
 
 void Shell::handleModeChange(const QVariantList& opargs)
@@ -921,9 +848,7 @@ void Shell::handleNeovimNotification(const QByteArray &name, const QVariantList&
 
 void Shell::handleExtGuiOption(const QString& name, const QVariant& value)
 {
-	if (name == "Popupmenu") {
-		handleGuiPopupmenu(value);
-	} else if (name == "RenderLigatures"){
+	if (name == "RenderLigatures"){
 		setLigatureMode(value.toBool());
 	} else {
 		// Uncomment for writing new event handling code.
@@ -1035,27 +960,6 @@ void Shell::handleCloseEvent(const QVariantList& args) noexcept
 	}
 
 	emit neovimGuiCloseRequest(status);
-}
-
-void Shell::handleGuiPopupmenu(const QVariant& value) noexcept
-{
-	if (!m_nvim->api1())
-	{
-		qDebug() << "GuiPopupmenu not supported by Neovim API!";
-		return;
-	}
-
-	if (!value.canConvert<bool>())
-	{
-		qDebug() << "GuiPopupmenu value not recognized!";
-		return;
-	}
-
-	const bool isEnabled{ value.toBool() };
-	m_nvim->api1()->nvim_ui_set_option("ext_popupmenu", isEnabled);
-
-	QSettings settings;
-	settings.setValue("ext_popupmenu", isEnabled);
 }
 
 void Shell::handleGridResize(const QVariantList& opargs)
