@@ -24,7 +24,7 @@ int s_exitStatus{ 0 };
 
 struct ConnectorInitArgs
 {
-	enum class Type
+	enum class Type : std::int8_t
 	{
 		Embed,
 		Server,
@@ -43,6 +43,10 @@ struct ConnectorInitArgs
 
 	ConnectorInitArgs(
 		Type _type, int _timeout, QString _server, QString _nvim, QStringList nvimArgs) noexcept;
+
+	// non copyable - we don't need it and it triggers lint warnings on const members
+	ConnectorInitArgs(const ConnectorInitArgs&) = delete;
+	ConnectorInitArgs& operator=(const ConnectorInitArgs&) = delete;
 };
 
 ConnectorInitArgs::Type getConnectorType(const QCommandLineParser& parser) noexcept
@@ -237,7 +241,9 @@ bool App::event(QEvent* event) noexcept
 	}
 	else if (event->type() == QEvent::Quit) {
 		for (auto window : s_windows) {
-			if (!window->close()) {
+			if (window->isClosing()) {
+				window->emitForceClose();
+			} else if (!window->close()) {
 				event->setAccepted(false);
 			}
 		}
@@ -267,7 +273,7 @@ void App::showUi() noexcept
 
 	// delete the main window when closed to emit `destroyed()` signal to
 	// support `:cq` return codes (Pull#644).
-	setQuitOnLastWindowClosed(false);
+	setQuitOnLastWindowClosed(true);
 
 	// Window geometry should be restored only when the user does not specify
 	// one of the following command line arguments. Argument "maximized" can
@@ -429,13 +435,6 @@ static QString GetNeovimVersionInfo(const QString& nvim) noexcept
 	return nvimproc.readAllStandardOutput();
 }
 
-// TODO Issue#752: Remove `endl` and `QT_ENDL` wrapper
-#if (QT_VERSION < QT_VERSION_CHECK(5, 14, 0))
-	#define QT_ENDL endl
-#else
-	#define QT_ENDL Qt::endl
-#endif
-
 void App::showVersionInfo(QCommandLineParser& parser) noexcept
 {
 	QString versionInfo;
@@ -444,20 +443,20 @@ void App::showVersionInfo(QCommandLineParser& parser) noexcept
 	const QString nvimExecutable { (parser.isSet("nvim")) ?
 		parser.value("nvim") : "nvim" };
 
-	out << "NVIM-QT v" << PROJECT_VERSION << QT_ENDL;
-	out << "Build type: " << CMAKE_BUILD_TYPE << QT_ENDL;
+	out << "NVIM-QT v" << PROJECT_VERSION << Qt::endl;
+	out << "Build type: " << CMAKE_BUILD_TYPE << Qt::endl;
 #if !defined(REPRODUCIBLE_BUILD)
-	out << "Compilation:" << CMAKE_CXX_FLAGS << QT_ENDL;
+	out << "Compilation:" << CMAKE_CXX_FLAGS << Qt::endl;
 #endif
-	out << "Qt Version: " << QT_VERSION_STR << QT_ENDL;
-	out << "Environment: " << QT_ENDL;
-	out << "  nvim: " << nvimExecutable << QT_ENDL;
-	out << "  args: " << getNeovimArgs().join(" ") << QT_ENDL;
-	out << "  runtime: " << getRuntimePath() << QT_ENDL;
+	out << "Qt Version: " << QT_VERSION_STR << Qt::endl;
+	out << "Environment: " << Qt::endl;
+	out << "  nvim: " << nvimExecutable << Qt::endl;
+	out << "  args: " << getNeovimArgs().join(" ") << Qt::endl;
+	out << "  runtime: " << getRuntimePath() << Qt::endl;
 
-	out << QT_ENDL;
+	out << Qt::endl;
 
-	out << GetNeovimVersionInfo(nvimExecutable) << QT_ENDL;
+	out << GetNeovimVersionInfo(nvimExecutable) << Qt::endl;
 
 	PrintInfo(versionInfo);
 }
@@ -467,7 +466,7 @@ void App::openNewWindow(const QVariantList& args) noexcept
 	QString server;
 	QString nvim{ "nvim" };
 	ConnectorInitArgs::Type type{ ConnectorInitArgs::Type::Default };
-	if (args.size() > 1 && args.at(1).type() == QVariant::Type::Map) {
+	if (args.size() > 1 && args.at(1).metaType().id() == QMetaType::QVariantMap) {
 		const QVariantMap initMap{ args.at(1).toMap() };
 
 		if (initMap.contains("nvim")) {

@@ -29,7 +29,7 @@ jobs:
 
           - name: Linux_Release
             flavor: Release
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             generator: Ninja
             cc: gcc
             cxx: g++
@@ -37,14 +37,14 @@ jobs:
 
           - name: MacOS_GCC
             flavor: Debug
-            runner: macos-12
+            runner: macos-13
             generator: Ninja
             cc: gcc-12
             cxx: g++-12
 
           - name: MacOS_Release
             flavor: Release
-            runner: macos-12
+            runner: macos-13
             generator: Ninja
             cc: clang
             cxx: clang++
@@ -60,7 +60,7 @@ jobs:
         if: ${{ startsWith(matrix.runner, 'ubuntu') }}
         run: |
           sudo add-apt-repository -y ppa:neovim-ppa/stable
-          sudo apt-get install -y neovim ninja-build libqt5svg5 libqt5svg5-dev qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools
+          sudo apt-get install -y neovim ninja-build libqt5svg5 libqt5svg5-dev qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools libfuse2
           sudo apt-get update -y
 
       - name: MacOS - Setup
@@ -120,7 +120,7 @@ jobs:
 
       - name: Upload Artifacts
         if: ${{ matrix.publish }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
           if-no-files-found: ignore

@@ -112,8 +112,12 @@ void MainWindow::init(NeovimConnector *c)
 			this, &MainWindow::neovimFullScreen);
 	connect(m_shell, &Shell::neovimFrameless,
 			this, &MainWindow::neovimFrameless);
+
+	// neovimGuiCloseRequest can't be a DirectConnection, since
+	// it's not invoked when it is still running. We need it to
+	// start executing right away.
 	connect(m_shell, &Shell::neovimGuiCloseRequest,
-			this, &MainWindow::neovimGuiCloseRequest);
+			this, &MainWindow::neovimGuiCloseRequest,Qt::ConnectionType::QueuedConnection);
 	connect(m_shell, &Shell::neovimOpacity,
 			this, &MainWindow::setWindowOpacity);
 	connect(m_nvim, &NeovimConnector::processExited,
@@ -146,16 +150,15 @@ void MainWindow::init(NeovimConnector *c)
 /** The Neovim process has exited */
 void MainWindow::neovimExited(int status)
 {
+	status = m_exitStatus; //status is only 1 byte so we use m_exitStatus
 	if (m_nvim->errorCause() != NeovimConnector::NoError) {
 		m_errorWidget->setText(m_nvim->errorString());
 		m_errorWidget->showReconnect(m_nvim->canReconnect());
 		m_stack.setCurrentIndex(0);
 	} else if (status != 0) {
-		m_errorWidget->setText(QString("Neovim exited with status code (%1)").arg(status));
+		m_errorWidget->setText(QStringLiteral("Neovim exited with status code (%1)").arg(status));
 		m_errorWidget->showReconnect(m_nvim->canReconnect());
 		m_stack.setCurrentIndex(0);
-	} else {
-		close();
 	}
 }
 void MainWindow::neovimError(NeovimConnector::NeovimError err)
@@ -174,7 +177,8 @@ void MainWindow::neovimError(NeovimConnector::NeovimError err)
 }
 void MainWindow::neovimIsUnsupported()
 {
-	m_errorWidget->setText(QString("Cannot connect to this Neovim, required API version 1, found [%1-%2]")
+	m_errorWidget->setText(
+		QStringLiteral("Cannot connect to this Neovim, required API version 1, found [%1-%2]")
 			.arg(m_nvim->apiCompatibility())
 			.arg(m_nvim->apiLevel()));
 	m_errorWidget->showReconnect(m_nvim->canReconnect());
@@ -253,22 +257,10 @@ void MainWindow::neovimFullScreen(bool set)
 
 void MainWindow::neovimGuiCloseRequest(int status)
 {
-	m_neovim_requested_close = true;
 	m_exitStatus = status;
-
-	// Try to wait for neovim to quit
-	QTimer timer;
-	timer.setSingleShot(true);
-	QEventLoop loop;
-	connect(m_nvim, &NeovimConnector::processExited, &loop, &QEventLoop::quit);
-	connect(m_nvim, &NeovimConnector::aboutToClose, &loop, &QEventLoop::quit);
-	timer.start(500);
-	loop.exec();
-	bool timed_out = !timer.isActive();
-	qDebug() << "Waited for neovim close, timed out:" << timed_out;
-
-	QMainWindow::close();
-	m_neovim_requested_close = false;
+	if (!m_inCloseEvent) {
+		close();
+	}
 }
 
 void MainWindow::reconnectNeovim()
@@ -279,24 +271,29 @@ void MainWindow::reconnectNeovim()
 	m_stack.setCurrentIndex(1);
 }
 
-void MainWindow::closeEvent(QCloseEvent *ev)
+void MainWindow::handleClosing()
 {
 	// Do not save window geometry in '--fullscreen' mode. If saved, all
 	// subsequent Neovim-Qt sessions would default to fullscreen mode.
 	if (!isFullScreen()) {
 		saveWindowGeometry();
 	}
+	emit closing(m_exitStatus);
+}
+void MainWindow::emitForceClose() const noexcept {
+	emit m_shell->forceQuit();
+}
 
-	if (m_neovim_requested_close) {
-		// If this was requested by nvim, shutdown
-		emit closing(m_exitStatus);
+void MainWindow::closeEvent(QCloseEvent *ev)
+{
+	m_inCloseEvent = true;
+
+	if (m_shell->close()) {
 		ev->accept();
-	} else if (m_shell->close()) {
-		// otherwise only if the Neovim shell closes too
-		emit closing(m_exitStatus);
-		ev->accept();
+		handleClosing();
 	} else {
 		ev->ignore();
+		m_inCloseEvent = false;
 	}
 }
 void MainWindow::changeEvent(QEvent* ev)
@@ -317,6 +314,7 @@ void MainWindow::handleNeovimAttachment(bool attached)
 	if (!attached) {
 		return;
 	}
+	m_exitStatus = 0;
 
 	if (m_shell && isWindow()) {
 		m_shell->updateGuiWindowState(windowState());
@@ -342,12 +340,6 @@ void MainWindow::saveWindowGeometry()
 
 void MainWindow::restoreWindowGeometry()
 {
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-	// Workaround for error `QVariant::save: unable to save type 'QList<int>'`.
-	// This error can occur when calling the two `settings.value(...)` below.
-	qRegisterMetaTypeStreamOperators<QList<int>>("QList<int>");
-#endif
-
 	QSettings settings("nvim-qt", "window-geometry");
 	if (!settings.value("restore_window_geometry", true).toBool()) {
 		return;

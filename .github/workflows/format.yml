@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
     env:
-      CLANG_FORMAT_DIFF: /usr/share/clang/clang-format-14/clang-format-diff.py
+      CLANG_FORMAT_DIFF: /usr/share/clang/clang-format-15/clang-format-diff.py
       BRANCH_POINT: ${{ github.base_ref }}
     runs-on: ubuntu-latest
     steps:
@@ -27,12 +27,9 @@ jobs:
       - name: Setup PR Branch
         run: git branch ${{ github.base_ref }} origin/${{ github.base_ref }}
 
-      - name: Install LLVM 14
+      - name: Install LLVM 15
         run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 14 all
-          rm llvm.sh
+          sudo apt-get install -y clang-format-15 clang-15
 
       - name: Run ClangFormatDiff Script
         run: contrib/clang-format-diff.sh
@@ -47,7 +44,7 @@ jobs:
 
       - name: Upload Artifacts
         if: fromJSON(env.changes_detected)
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ClangFormat Patch
           path: clang_format.patch
