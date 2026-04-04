@@ -2,7 +2,7 @@ name: Format
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, copilot/github-actions-qt6 ]
   pull_request:
     branches: [ master ]
 
