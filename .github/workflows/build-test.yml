@@ -35,20 +35,28 @@ jobs:
             cxx: g++
             publish: true
 
-          - name: MacOS_GCC
+          - name: MacOS_Debug
             flavor: Debug
-            runner: macos-13
+            runner: macos-latest
             generator: Ninja
-            cc: gcc-12
-            cxx: g++-12
+            cc: clang
+            cxx: clang++
 
           - name: MacOS_Release
             flavor: Release
-            runner: macos-13
+            runner: macos-latest
             generator: Ninja
             cc: clang
             cxx: clang++
             publish: true
+
+          - name: Windows_MSVC
+            flavor: Release
+            runner: windows-latest
+            generator: Ninja
+            cc: cl
+            cxx: cl
+
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -66,10 +74,29 @@ jobs:
       - name: MacOS - Setup
         if: ${{ startsWith(matrix.runner, 'macos') }}
         run: |
-          brew install neovim
+          brew install neovim qt
           brew ls --formula | grep -wq ninja || brew install ninja
-          brew ls --formula | grep -wq qt || brew install qt
-          brew ls --formula | grep -wq msgpack || brew install msgpack
+          echo "$(brew --prefix qt)/bin" >> "$GITHUB_PATH"
+          echo "Qt6_DIR=$(brew --prefix qt)/lib/cmake/Qt6" >> "$GITHUB_ENV"
+
+      - name: Windows - Install Qt
+        if: ${{ startsWith(matrix.runner, 'windows') }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.5.*'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2019_64'
+
+      - name: Windows - Setup MSVC
+        if: ${{ startsWith(matrix.runner, 'windows') }}
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Windows - Setup
+        if: ${{ startsWith(matrix.runner, 'windows') }}
+        run: |
+          choco install -y neovim ninja
+        shell: pwsh
 
       #
       # Build and Test
@@ -82,7 +109,6 @@ jobs:
           CMAKE_BUILD_TYPE: ${{ matrix.flavor }}
           CMAKE_GENERATOR: ${{ matrix.generator }}
         run: >
-          env PATH=${{ startsWith(matrix.runner, 'macos') && '/usr/local/opt/qt/bin:' || '' }}/usr/local/bin:/usr/bin/:/bin
           cmake -B ./build
           -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
           -DCMAKE_C_COMPILER=${{ matrix.cc }}
@@ -115,7 +141,7 @@ jobs:
       - name: MacOS - Publish
         if: ${{ matrix.publish && startsWith(matrix.runner, 'macos') }}
         run: |
-          /usr/local/opt/qt/bin/macdeployqt ./build/bin/nvim-qt.app -dmg
+          $(brew --prefix qt)/bin/macdeployqt ./build/bin/nvim-qt.app -dmg
           mv ./build/bin/nvim-qt.dmg neovim-qt.dmg
 
       - name: Upload Artifacts
