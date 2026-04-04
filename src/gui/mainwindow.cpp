@@ -116,8 +116,11 @@ void MainWindow::init(NeovimConnector *c)
 	// neovimGuiCloseRequest can't be a DirectConnection, since
 	// it's not invoked when it is still running. We need it to
 	// start executing right away.
-	connect(m_shell, &Shell::neovimGuiCloseRequest,
-			this, &MainWindow::neovimGuiCloseRequest,Qt::ConnectionType::QueuedConnection);
+	connect(m_shell,
+		&Shell::neovimGuiCloseRequest,
+		this,
+		&MainWindow::neovimGuiCloseRequest,
+		Qt::ConnectionType::QueuedConnection);
 	connect(m_shell, &Shell::neovimOpacity,
 			this, &MainWindow::setWindowOpacity);
 	connect(m_nvim, &NeovimConnector::processExited,
@@ -150,7 +153,7 @@ void MainWindow::init(NeovimConnector *c)
 /** The Neovim process has exited */
 void MainWindow::neovimExited(int status)
 {
-	status = m_exitStatus; //status is only 1 byte so we use m_exitStatus
+	status = m_exitStatus; // status is only 1 byte so we use m_exitStatus
 	if (m_nvim->errorCause() != NeovimConnector::NoError) {
 		m_errorWidget->setText(m_nvim->errorString());
 		m_errorWidget->showReconnect(m_nvim->canReconnect());
@@ -280,18 +283,20 @@ void MainWindow::handleClosing()
 	}
 	emit closing(m_exitStatus);
 }
-void MainWindow::emitForceClose() const noexcept {
+void MainWindow::emitForceClose() const noexcept
+{
 	emit m_shell->forceQuit();
 }
 
-void MainWindow::closeEvent(QCloseEvent *ev)
+void MainWindow::closeEvent(QCloseEvent* ev)
 {
 	m_inCloseEvent = true;
 
 	if (m_shell->close()) {
 		ev->accept();
 		handleClosing();
-	} else {
+	}
+	else {
 		ev->ignore();
 		m_inCloseEvent = false;
 	}

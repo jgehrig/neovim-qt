@@ -243,7 +243,8 @@ bool App::event(QEvent* event) noexcept
 		for (auto window : s_windows) {
 			if (window->isClosing()) {
 				window->emitForceClose();
-			} else if (!window->close()) {
+			}
+			else if (!window->close()) {
 				event->setAccepted(false);
 			}
 		}
@@ -413,8 +414,6 @@ void App::checkArgumentsMayTerminate(QCommandLineParser& parser) noexcept
 
 /*static*/ QStringList App::getNeovimArgs() noexcept
 {
-	QStringList neovimArgs{ "--cmd","set termguicolors" };
-
 	QString runtimePath{ getRuntimePath() };
 	if (runtimePath.isEmpty()) {
 		return { "--cmd","set termguicolors" };
