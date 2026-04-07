@@ -81,10 +81,12 @@ void TestQSettings::OptionPopupMenu() noexcept
 
 	SendNeovimCommand(connector, "GuiPopupmenu 1");
 	SPYWAIT(spy_fontchange, 2500 /*msec*/);
+	settings.sync();
 	QCOMPARE(settings.value("ext_popupmenu").toBool(), true);
 
 	SendNeovimCommand(connector, "GuiPopupmenu 0");
 	SPYWAIT(spy_fontchange, 2500 /*msec*/);
+	settings.sync();
 	QCOMPARE(settings.value("ext_popupmenu").toBool(), false);
 }
 
@@ -96,9 +98,11 @@ void TestQSettings::OptionTabline() noexcept
 	QSettings settings;
 
 	SendNeovimCommand(connector, "GuiTabline 1");
+	settings.sync();
 	QCOMPARE(settings.value("ext_tabline").toBool(), true);
 
 	SendNeovimCommand(connector, "GuiTabline 0");
+	settings.sync();
 	QCOMPARE(settings.value("ext_tabline").toBool(), false);
 }
 
@@ -114,6 +118,7 @@ void TestQSettings::GuiFont() noexcept
 
 	SendNeovimCommand(connector, fontCommand);
 	QCOMPARE(w->shell()->fontDesc(), fontDesc);
+	settings.sync();
 	QCOMPARE(settings.value("Gui/Font").toString(), fontDesc);
 }
 
@@ -125,9 +130,11 @@ void TestQSettings::GuiScrollBar() noexcept
 	QSettings settings;
 
 	SendNeovimCommand(connector, "GuiScrollBar 1");
+	settings.sync();
 	QCOMPARE(settings.value("Gui/ScrollBar").toBool(), true);
 
 	SendNeovimCommand(connector, "GuiScrollBar 0");
+	settings.sync();
 	QCOMPARE(settings.value("Gui/ScrollBar").toBool(), false);
 }
 void TestQSettings::GuiTreeView() noexcept
@@ -138,9 +145,11 @@ void TestQSettings::GuiTreeView() noexcept
 	QSettings settings;
 
 	SendNeovimCommand(connector, "GuiTreeviewShow");
+	settings.sync();
 	QCOMPARE(settings.value("Gui/TreeView").toBool(), true);
 
 	SendNeovimCommand(connector, "GuiTreeviewHide");
+	settings.sync();
 	QCOMPARE(settings.value("Gui/TreeView").toBool(), false);
 }
 

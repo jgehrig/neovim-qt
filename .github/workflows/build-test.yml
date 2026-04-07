@@ -120,11 +120,17 @@ jobs:
       - name: Build
         run: cmake --build ${{ github.workspace }}/build
 
-      - name: Test
+      - name: Test (Linux)
+        if: ${{ startsWith(matrix.runner, 'ubuntu') }}
         uses: GabrielBB/xvfb-action@v1 # Required by Linux, no X11 $DISPLAY
         with:
           working-directory: ${{ github.workspace }}/build
           run: ctest -VV --timeout 120 --output-on-failure -C ${{ matrix.flavor }}
+
+      - name: Test (Non-Linux)
+        if: ${{ !startsWith(matrix.runner, 'ubuntu') }}
+        working-directory: ${{ github.workspace }}/build
+        run: ctest -VV --timeout 120 --output-on-failure -C ${{ matrix.flavor }}
 
       #
       # Deploy Release Binaries

@@ -259,7 +259,10 @@ void TestShell::GetClipboard() noexcept
 	QObject::connect(c->neovimObject(), &NeovimApi1::err_vim_command_output, SignalPrintError);
 
 	// provided by the GUI shim
-	c->api0()->vim_command(c->encode("call GuiClipboard()"));
+	QSignalSpy spy_clipboard_cmd{ c->api0()->vim_command(c->encode("call GuiClipboard()")),
+		&MsgpackRequest::finished };
+	QVERIFY(spy_clipboard_cmd.isValid());
+	QVERIFY2(SPYWAIT(spy_clipboard_cmd), "Waiting for GuiClipboard()");
 
 	QGuiApplication::clipboard()->setText(register_data, GetClipboardMode(reg));
 
@@ -297,7 +300,10 @@ void TestShell::SetClipboard() noexcept
 	QObject::connect(c->neovimObject(), &NeovimApi1::err_vim_command_output, SignalPrintError);
 
 	// provided by the GUI shim
-	c->api0()->vim_command(c->encode("call GuiClipboard()"));
+	QSignalSpy spy_clipboard_cmd{ c->api0()->vim_command(c->encode("call GuiClipboard()")),
+		&MsgpackRequest::finished };
+	QVERIFY(spy_clipboard_cmd.isValid());
+	QVERIFY2(SPYWAIT(spy_clipboard_cmd), "Waiting for GuiClipboard()");
 
 	QString setreg_cmd =
 		QStringLiteral("setreg('%1', '%2')\n").arg(reg).arg(QString::fromUtf8(register_data));
