@@ -96,6 +96,7 @@ jobs:
         if: ${{ startsWith(matrix.runner, 'windows') }}
         run: |
           choco install -y neovim ninja
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\tools\neovim\nvim-win64\bin"
         shell: pwsh
 
       #
