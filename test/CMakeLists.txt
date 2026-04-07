@@ -30,6 +30,8 @@ function(add_xtest SOURCE_NAME)
 		${ARGV1}
 		${ARGV2})
 	target_link_libraries(${SOURCE_NAME} ${QTLIBS} ${MSGPACK_LIBRARIES} neovim-qt)
+	# Force console subsystem on Windows so ctest can capture stdout
+	set_target_properties(${SOURCE_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
 	add_test(NAME ${SOURCE_NAME} COMMAND ${SOURCE_NAME} ${CTEST_EXE_ARGS})
 	add_dependencies(check ${SOURCE_NAME})
 endfunction()
@@ -47,6 +49,8 @@ function(add_xtest_gui SOURCE_NAME)
 		${SOURCES_COMMON_GUI}
 		${ARGV1} ${ARGV2})
 	target_link_libraries(${SOURCE_NAME} ${QTLIBS} ${MSGPACK_LIBRARIES} neovim-qt Qt${QT_VERSION_MAJOR}::Widgets neovim-qt-gui)
+	# Force console subsystem on Windows so ctest can capture stdout
+	set_target_properties(${SOURCE_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
 	add_test(NAME ${SOURCE_NAME} COMMAND ${SOURCE_NAME} ${CTEST_EXE_ARGS}
 		# Run GUI tests from source dir, they depend on src files
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
@@ -56,6 +60,8 @@ endfunction()
 function(add_shared_test SOURCE_NAME)
 	add_executable(${SOURCE_NAME} ${ARGV1} ${ARGV2} ${ARGV3})
 	target_link_libraries(${SOURCE_NAME} Qt${QT_VERSION_MAJOR}::Network ${QTLIBS_TEST} ${QTLIBS_GUI} ${MSGPACK_LIBRARIES} neovim-qt)
+	# Force console subsystem on Windows so ctest can capture stdout
+	set_target_properties(${SOURCE_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
 	add_test(NAME ${SOURCE_NAME} COMMAND ${SOURCE_NAME})
 	add_dependencies(check ${SOURCE_NAME})
 endfunction()
