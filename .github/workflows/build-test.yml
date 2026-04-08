@@ -132,6 +132,30 @@ jobs:
         working-directory: ${{ github.workspace }}/build
         run: ctest -VV --timeout 120 --output-on-failure -C ${{ matrix.flavor }}
 
+      # On Windows, QTest executables linked with Qt::Widgets/Qt::Gui run as GUI-subsystem
+      # applications. GitHub Actions does not allocate a console for these processes, so their
+      # stdout is silently discarded and ctest --output-on-failure captures nothing. Each test
+      # is invoked with -o <name>_output.txt (see test/CMakeLists.txt) to write QTest output
+      # directly to the filesystem. This step prints those files so failures are visible in
+      # the Actions log even though ctest itself showed no per-assertion output.
+      - name: Windows - Print Test Results
+        if: ${{ always() && startsWith(matrix.runner, 'windows') }}
+        working-directory: ${{ github.workspace }}/build
+        shell: pwsh
+        run: |
+          Get-ChildItem -Filter "*_output.txt" | ForEach-Object {
+            Write-Host "=== $($_.Name) ==="
+            Get-Content $_.FullName
+          }
+
+      - name: Windows - Upload Test Results
+        if: ${{ always() && startsWith(matrix.runner, 'windows') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}_test_results
+          if-no-files-found: ignore
+          path: ${{ github.workspace }}/build/*_output.txt
+
       #
       # Deploy Release Binaries
       #

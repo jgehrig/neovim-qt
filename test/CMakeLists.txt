@@ -30,11 +30,13 @@ function(add_xtest SOURCE_NAME)
 		${ARGV1}
 		${ARGV2})
 	target_link_libraries(${SOURCE_NAME} ${QTLIBS} ${MSGPACK_LIBRARIES} neovim-qt)
-	# Qt6's deferred finalization (triggered by target_link_libraries) sets WIN32_EXECUTABLE=TRUE
-	# for any target linking Qt::Gui transitively. Defer our reset to run after Qt6's call,
-	# ensuring the console subsystem is used so ctest can capture stdout on Windows.
-	cmake_language(DEFER CALL set_target_properties ${SOURCE_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
-	add_test(NAME ${SOURCE_NAME} COMMAND ${SOURCE_NAME} ${CTEST_EXE_ARGS})
+	# On Windows, QTest executables that link Qt::Gui (transitively via Qt::Svg, Qt::Widgets, etc.)
+	# are built as GUI-subsystem applications. GitHub Actions does not create a console for these
+	# processes, so their stdout is silently discarded and ctest --output-on-failure captures
+	# nothing. Writing output to a file with -o bypasses this limitation entirely: QTest writes
+	# directly to the filesystem regardless of the subsystem, and the workflow then prints the
+	# file after the run. See: https://doc.qt.io/qt-6/qtest-overview.html
+	add_test(NAME ${SOURCE_NAME} COMMAND ${SOURCE_NAME} -o "${CMAKE_BINARY_DIR}/${SOURCE_NAME}_output.txt" ${CTEST_EXE_ARGS})
 	add_dependencies(check ${SOURCE_NAME})
 endfunction()
 
@@ -51,10 +53,8 @@ function(add_xtest_gui SOURCE_NAME)
 		${SOURCES_COMMON_GUI}
 		${ARGV1} ${ARGV2})
 	target_link_libraries(${SOURCE_NAME} ${QTLIBS} ${MSGPACK_LIBRARIES} neovim-qt Qt${QT_VERSION_MAJOR}::Widgets neovim-qt-gui)
-	# Qt6's deferred finalization sets WIN32_EXECUTABLE=TRUE for GUI targets.
-	# Defer our reset to run after Qt6's call so ctest can capture stdout on Windows.
-	cmake_language(DEFER CALL set_target_properties ${SOURCE_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
-	add_test(NAME ${SOURCE_NAME} COMMAND ${SOURCE_NAME} ${CTEST_EXE_ARGS}
+	# See add_xtest comment above for why we use -o instead of relying on stdout.
+	add_test(NAME ${SOURCE_NAME} COMMAND ${SOURCE_NAME} -o "${CMAKE_BINARY_DIR}/${SOURCE_NAME}_output.txt" ${CTEST_EXE_ARGS}
 		# Run GUI tests from source dir, they depend on src files
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 	add_dependencies(check ${SOURCE_NAME})
@@ -63,10 +63,8 @@ endfunction()
 function(add_shared_test SOURCE_NAME)
 	add_executable(${SOURCE_NAME} ${ARGV1} ${ARGV2} ${ARGV3})
 	target_link_libraries(${SOURCE_NAME} Qt${QT_VERSION_MAJOR}::Network ${QTLIBS_TEST} ${QTLIBS_GUI} ${MSGPACK_LIBRARIES} neovim-qt)
-	# Qt6's deferred finalization sets WIN32_EXECUTABLE=TRUE for GUI targets.
-	# Defer our reset to run after Qt6's call so ctest can capture stdout on Windows.
-	cmake_language(DEFER CALL set_target_properties ${SOURCE_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
-	add_test(NAME ${SOURCE_NAME} COMMAND ${SOURCE_NAME})
+	# See add_xtest comment above for why we use -o instead of relying on stdout.
+	add_test(NAME ${SOURCE_NAME} COMMAND ${SOURCE_NAME} -o "${CMAKE_BINARY_DIR}/${SOURCE_NAME}_output.txt")
 	add_dependencies(check ${SOURCE_NAME})
 endfunction()
 
