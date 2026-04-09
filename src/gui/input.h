@@ -6,7 +6,7 @@
 #include <QPoint>
 #include <QString>
 
-namespace NeovimQt { namespace Input {
+namespace NeovimQt::Input {
 
 /// Returns the QMap of all NeoVim-recognized special keys.
 const QMap<int, QString>& GetSpecialKeysMap() noexcept;
@@ -55,4 +55,4 @@ QKeyEvent CreatePlatformNormalizedKeyEvent(
 	Qt::KeyboardModifiers mod,
 	const QString& text) noexcept;
 
-} } // namespace NeovimQt:Input
+} // namespace NeovimQt::Input

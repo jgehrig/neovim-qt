@@ -3,7 +3,7 @@
 #include <QMap>
 #include <QVariant>
 
-namespace NeovimQt { namespace Input {
+namespace NeovimQt::Input {
 
 const QMap<int, QString>& GetSpecialKeysMap() noexcept
 {
@@ -65,7 +65,7 @@ static QVariant GetButtonName(
 		case Qt::LeftButton:
 		{
 			if (clickCount > 1 && clickCount <= 4) {
-				return QString("%1-Left").arg(clickCount);
+				return QStringLiteral("%1-Left").arg(clickCount);
 			}
 			return QStringLiteral("Left");
 		}
@@ -273,4 +273,4 @@ QString convertKey(const QKeyEvent& ev) noexcept
 	return evNormalized.text();
 }
 
-} } // namespace NeovimQt::Input
+} // namespace NeovimQt::Input

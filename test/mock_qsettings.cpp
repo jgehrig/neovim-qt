@@ -38,4 +38,9 @@ void OverwriteContents(QSettings::SettingsMap newValue) noexcept
 	s_mockSettingsMap = std::move(newValue);
 }
 
+QVariant GetValue(const QString& key) noexcept
+{
+	return s_mockSettingsMap.value(key);
+}
+
 }} // namespace NeovimQt::MockQSettings
