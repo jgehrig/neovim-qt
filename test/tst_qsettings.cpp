@@ -34,14 +34,18 @@ static void SendNeovimCommand(NeovimConnector* connector, const QString& command
 	QVERIFY(SPYWAIT(spyCommand));
 
 
-	// Hypothesis: sometimes we do not wait long enough for the effects of
-	// a command to manifest because it requires
-	// 1. msg from gui to nvim
-	// 2. msg from nvim to gui
-	// The later are usually asynchronous notifications
+	// On Windows (and sometimes macOS/Linux), showing or hiding a widget that is
+	// a sibling of ShellWidget in a layout causes ShellWidget to resize. This
+	// triggers Shell::resizeNeovim → ui_try_resize, and Neovim responds with a
+	// flood of redraw events. If the event loop is blocked (e.g. by qSleep) while
+	// these events accumulate in the socket buffer, the NEXT SPYWAIT must drain the
+	// entire backlog before it can receive its own reply — easily exceeding the
+	// 2-second timeout and causing a spurious failure.
 	//
-	// Attempt to ensure the previous command had the inteded effect
-	QTest::qSleep(1000);
+	// qWait (unlike qSleep) runs the Qt event loop for the full duration, so all
+	// pending socket data is read and processed. By the time the next command is
+	// sent, the event loop is clean and the 2-second SPYWAIT is sufficient.
+	QTest::qWait(1000);
 }
 
 void TestQSettings::initTestCase() noexcept
